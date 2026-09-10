@@ -1,5 +1,5 @@
 import React from 'react'
-import { ArrowLeft, Bug, AlertTriangle, CloudRain, Droplets, Thermometer, Leaf, Activity } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, CloudRain, Droplets, Thermometer, Leaf, Activity, AlertCircle, HelpCircle } from 'lucide-react'
 
 export default function AnalysisResult({ result, onBack }) {
   if (!result || !result.analysis) {
@@ -19,15 +19,15 @@ export default function AnalysisResult({ result, onBack }) {
     )
   }
 
-  const { analysis } = result
-  
+  const { analysis, imagePreviewUrl } = result
+
   // Choose color based on future risk
   const getRiskColor = (risk) => {
     if (risk === 'HIGH') return '#ef4444' // red
     if (risk === 'MODERATE') return '#f59e0b' // orange
     return '#22c55e' // green
   }
-  
+
   const riskColor = getRiskColor(analysis.future_risk)
 
   return (
@@ -41,34 +41,78 @@ export default function AnalysisResult({ result, onBack }) {
       </div>
 
       <div className="analysis-result" style={{ padding: '0 16px 24px' }}>
-        
-        {/* Analyzed Image Mock Viewfinder */}
-        <div className="analysis-image animate-in" style={{ height: 160, borderRadius: 16, overflow: 'hidden', marginBottom: 16 }}>
-          <div style={{
-            width: '100%', height: '100%',
-            background: 'linear-gradient(135deg, #5ca04e 0%, #3d7a32 40%, #2d6625 80%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
-          }}>
+
+        {/* Analyzed Image Viewfinder */}
+        <div className="analysis-image animate-in" style={{ height: 180, borderRadius: 16, overflow: 'hidden', marginBottom: 16, background: '#111' }}>
+          {imagePreviewUrl ? (
+            <img
+              src={imagePreviewUrl}
+              alt="Analyzed Crop Leaf"
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ) : (
             <div style={{
-              width: '60%', height: '80%',
-              background: 'linear-gradient(145deg, #6ab55c 0%, #4a9040 40%, #357a2a 80%)',
-              borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%',
-              position: 'relative'
+              width: '100%', height: '100%',
+              background: 'linear-gradient(135deg, #5ca04e 0%, #3d7a32 40%, #2d6625 80%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
             }}>
-              {/* Disease spots to imply image was taken */}
-              <div style={{ position: 'absolute', top: '25%', left: '35%', width: 20, height: 20, background: '#8B6914', borderRadius: '50%', opacity: 0.8 }}></div>
-              <div style={{ position: 'absolute', top: '50%', left: '55%', width: 16, height: 16, background: '#8B6914', borderRadius: '50%', opacity: 0.7 }}></div>
-              <div style={{ position: 'absolute', top: '35%', left: '60%', width: 14, height: 14, background: '#A07018', borderRadius: '50%', opacity: 0.6 }}></div>
+              <div style={{
+                width: '60%', height: '80%',
+                background: 'linear-gradient(145deg, #6ab55c 0%, #4a9040 40%, #357a2a 80%)',
+                borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%',
+                position: 'relative'
+              }}>
+                <div style={{ position: 'absolute', top: '25%', left: '35%', width: 20, height: 20, background: '#8B6914', borderRadius: '50%', opacity: 0.8 }}></div>
+                <div style={{ position: 'absolute', top: '50%', left: '55%', width: 16, height: 16, background: '#8B6914', borderRadius: '50%', opacity: 0.7 }}></div>
+                <div style={{ position: 'absolute', top: '35%', left: '60%', width: 14, height: 14, background: '#A07018', borderRadius: '50%', opacity: 0.6 }}></div>
+              </div>
             </div>
-            <div style={{ position: 'absolute', bottom: 8, right: 12, color: 'white', fontSize: 12, fontWeight: '600', opacity: 0.8 }}>
-              LEAF IMAGE
-            </div>
-          </div>
+          )}
         </div>
 
+        {/* Uncertain Warning Banner (if confidence is low) */}
+        {analysis.is_uncertain && (
+          <div className="animate-in" style={{
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: 14,
+            padding: '12px 16px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12
+          }}>
+            <HelpCircle size={20} color="#d97706" style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <div style={{ fontWeight: '700', fontSize: 13, color: '#92400e', marginBottom: 2 }}>
+                LOW CONFIDENCE DIAGNOSIS ({analysis.confidence}%)
+              </div>
+              <div style={{ fontSize: 12, color: '#b45309', lineHeight: 1.4 }}>
+                The AI detected a tomato leaf, but symptoms are faint or the image is blurry. We recommend retaking with natural lighting.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Disease Badge */}
-        <div className="disease-badge animate-in" style={{ animationDelay: '0.05s', background: '#fff', border: '1px solid #eee', borderRadius: 16, padding: 16, display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-          <div className="disease-icon" style={{ background: '#fef2f2', color: '#ef4444', padding: 12, borderRadius: 12 }}>
+        <div className="disease-badge animate-in" style={{
+          animationDelay: '0.05s',
+          background: '#fff',
+          border: '1px solid #eee',
+          borderRadius: 16,
+          padding: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          marginBottom: 16,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+        }}>
+          <div className="disease-icon" style={{
+            background: analysis.is_uncertain ? '#fffbeb' : '#fef2f2',
+            color: analysis.is_uncertain ? '#d97706' : '#ef4444',
+            padding: 12,
+            borderRadius: 12
+          }}>
             <Leaf size={28} />
           </div>
           <div style={{ flex: 1 }}>
@@ -140,7 +184,14 @@ export default function AnalysisResult({ result, onBack }) {
         </div>
 
         {/* Recommendations */}
-        <div className="analysis-section recommendations animate-in" style={{ animationDelay: '0.25s', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(21, 128, 61, 0.15) 100%)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+        <div className="analysis-section recommendations animate-in" style={{
+          animationDelay: '0.25s',
+          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(21, 128, 61, 0.15) 100%)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+          borderRadius: 16,
+          padding: 16,
+          marginBottom: 16
+        }}>
           <h4 style={{ margin: '0 0 12px', color: '#166534', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
             💡 AGRISENSE ACTION
           </h4>
@@ -151,9 +202,24 @@ export default function AnalysisResult({ result, onBack }) {
           </ul>
         </div>
 
-        {/* Detailed Guide Button */}
-        <button className="btn-detailed animate-in" style={{ animationDelay: '0.3s', width: '100%', padding: 14, background: '#fff', border: '1px solid #16a34a', color: '#16a34a', borderRadius: 12, fontWeight: '600', fontSize: 15, cursor: 'pointer' }}>
-          VIEW FULL PLAN
+        {/* Retake / Back Button */}
+        <button
+          onClick={onBack}
+          className="btn-detailed animate-in"
+          style={{
+            animationDelay: '0.3s',
+            width: '100%',
+            padding: 14,
+            background: '#fff',
+            border: '1px solid #16a34a',
+            color: '#16a34a',
+            borderRadius: 12,
+            fontWeight: '600',
+            fontSize: 15,
+            cursor: 'pointer'
+          }}
+        >
+          SCAN ANOTHER LEAF
         </button>
       </div>
     </div>

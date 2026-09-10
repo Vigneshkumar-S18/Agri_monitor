@@ -80,12 +80,18 @@ def analyze_crop_state(
             "High rainfall probability. Reconsider irrigation before applying additional water."
         )
         
+    is_uncertain = confidence < 60.0
+    if is_uncertain and "healthy" not in disease_lower:
+        recommendations.insert(0, "Diagnosis confidence is low (< 60%). For higher accuracy, capture a well-lit close-up of a single leaf avoiding shadows and blur.")
+
     return {
         "current_state": current_state,
         "disease": disease.replace('Tomato___', '').replace('_', ' '),
         "confidence": confidence,
         "severity": severity,
+        "is_uncertain": is_uncertain,
         "future_risk": future_risk,
         "risk_score": min(risk_score, 100),
         "recommendations": recommendations
     }
+
