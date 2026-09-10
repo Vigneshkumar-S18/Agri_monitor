@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   AlertTriangle, Droplets, Thermometer, Leaf, 
-  Shield, Beaker, Bell
+  Shield, Beaker, Bell, ChevronDown, ChevronUp
 } from 'lucide-react'
 
 const alerts = [
@@ -49,6 +49,11 @@ const alerts = [
 
 export default function AlertsScreen() {
   const highPriorityCount = alerts.filter(a => a.type === 'critical' || a.type === 'warning').length
+  const [expandedId, setExpandedId] = useState(null)
+
+  const toggleExpand = (id) => {
+    setExpandedId(prev => (prev === id ? null : id))
+  }
 
   return (
     <div>
@@ -67,19 +72,39 @@ export default function AlertsScreen() {
         <div className="alert-list">
           {alerts.map((alert, i) => {
             const Icon = alert.icon
+            const isExpanded = expandedId === alert.id
             return (
               <div 
                 className="alert-card animate-in" 
                 key={alert.id}
-                style={{ animationDelay: `${0.05 + i * 0.05}s` }}
+                style={{ 
+                  animationDelay: `${0.05 + i * 0.05}s`, 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'flex-start'
+                }}
+                onClick={() => toggleExpand(alert.id)}
               >
                 <div className={`alert-indicator ${alert.type}`}>
                   <Icon />
                 </div>
-                <div className="alert-content">
-                  <h4>{alert.title}</h4>
-                  <p>{alert.description}</p>
-                  <span className="alert-time">{alert.time}</span>
+                <div className="alert-content" style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ margin: 0 }}>{alert.title}</h4>
+                    {isExpanded ? <ChevronUp size={16} color="#888" /> : <ChevronDown size={16} color="#888" />}
+                  </div>
+                  
+                  {isExpanded && (
+                    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #eaeaea' }}>
+                      <p style={{ margin: 0, fontSize: '14px', color: '#555', lineHeight: '1.4' }}>
+                        {alert.description}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <span className="alert-time" style={{ display: 'block', marginTop: '6px' }}>
+                    {alert.time}
+                  </span>
                 </div>
               </div>
             )
