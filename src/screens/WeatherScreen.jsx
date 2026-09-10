@@ -1,21 +1,36 @@
-import React, { useState, useEffect } from 'react'
-import { MapPin, Droplets, Wind, Eye, Thermometer } from 'lucide-react'
-import { getWeather, getWeatherMapping } from '../services/weatherService'
+import React, { useState, useEffect, useRef } from 'react'
+import { MapPin, Droplets, Wind, Eye, Thermometer, Search, Navigation, X, Check, ChevronDown } from 'lucide-react'
+import { getWeather, getWeatherMapping, searchLocations } from '../services/weatherService'
+
+const POPULAR_HUBS = [
+  { name: 'Coimbatore, Tamil Nadu', lat: 11.0168, lon: 76.9558 },
+  { name: 'Nashik, Maharashtra', lat: 19.9975, lon: 73.7898 },
+  { name: 'Bengaluru, Karnataka', lat: 12.9716, lon: 77.5946 },
+  { name: 'Hyderabad, Telangana', lat: 17.3850, lon: 78.4867 },
+  { name: 'Pune, Maharashtra', lat: 18.5204, lon: 73.8567 },
+  { name: 'Guntur, Andhra Pradesh', lat: 16.3067, lon: 80.4365 },
+  { name: 'Shimla, Himachal Pradesh', lat: 31.1048, lon: 77.1734 }
+]
 
 export default function WeatherScreen() {
   const [weatherData, setWeatherData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [location, setLocation] = useState(POPULAR_HUBS[0])
 
-  // Default to a location if geolocation fails or before it loads (e.g., Coimbatore)
-  const [location, setLocation] = useState({ name: 'Coimbatore, Tamil Nadu', lat: 11.0168, lon: 76.9558 })
+  // Location search modal / dropdown state
+  const [showLocationPicker, setShowLocationPicker] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [locatingUser, setLocatingUser] = useState(false)
+  const searchTimeoutRef = useRef(null)
 
   useEffect(() => {
-    // Optional: Get actual location, or just use default for hackathon
-    // For now, we'll just fetch for the default location to ensure it works instantly
     async function fetchWeather() {
       try {
         setLoading(true)
+        setError(null)
         const data = await getWeather(location.lat, location.lon)
         setWeatherData(data)
       } catch (err) {
@@ -29,7 +44,64 @@ export default function WeatherScreen() {
     fetchWeather()
   }, [location])
 
-  if (loading) {
+  // Debounced search
+  const handleSearchChange = (e) => {
+    const val = e.target.value
+    setSearchQuery(val)
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    if (val.trim().length >= 2) {
+      setSearching(true)
+      searchTimeoutRef.current = setTimeout(async () => {
+        const results = await searchLocations(val)
+        setSearchResults(results)
+        setSearching(false)
+      }, 350)
+    } else {
+      setSearchResults([])
+      setSearching(false)
+    }
+  }
+
+  const handleSelectLocation = (loc) => {
+    setLocation(loc)
+    setShowLocationPicker(false)
+    setSearchQuery('')
+    setSearchResults([])
+  }
+
+  // Geolocation
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.")
+      return
+    }
+
+    setLocatingUser(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords
+        setLocation({
+          name: `Current Location (${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°)`,
+          lat: latitude,
+          lon: longitude
+        })
+        setLocatingUser(false)
+        setShowLocationPicker(false)
+      },
+      (err) => {
+        console.error("Geolocation error:", err)
+        alert("Unable to retrieve location. Please check browser permissions or select a city manually.")
+        setLocatingUser(false)
+      },
+      { timeout: 10000 }
+    )
+  }
+
+  if (loading && !weatherData) {
     return (
       <div>
         <div className="screen-header">
@@ -42,7 +114,7 @@ export default function WeatherScreen() {
     )
   }
 
-  if (error || !weatherData) {
+  if (error && !weatherData) {
     return (
       <div>
         <div className="screen-header">
@@ -58,8 +130,7 @@ export default function WeatherScreen() {
   const { current, hourly, daily } = weatherData;
   const currentMapping = getWeatherMapping(current.weather_code);
 
-  // Format hourly data (next 24 hours)
-  // We'll take the next 12 hours for display
+  // Format hourly data (next 12 hours)
   const currentHourIndex = hourly.time.findIndex(t => new Date(t) > new Date())
   const displayHours = []
   const startIndex = currentHourIndex === -1 ? 0 : Math.max(0, currentHourIndex - 1)
@@ -94,7 +165,6 @@ export default function WeatherScreen() {
   }
 
   // Agrisense Insight Logic
-  // Look at next 12 hours rain probability
   const next12HoursRainProb = hourly.precipitation_probability.slice(startIndex, startIndex + 12);
   const maxRainProb = Math.max(...next12HoursRainProb);
   
@@ -116,13 +186,192 @@ export default function WeatherScreen() {
       </div>
 
       <div className="weather-screen">
-        {/* Location */}
-        <div className="weather-location animate-in">
-          <div className="loc-name">
-            <MapPin />
-            <span>{location.name}</span>
+        {/* Interactive Location Selector Bar */}
+        <div
+          className="weather-location animate-in"
+          onClick={() => setShowLocationPicker(true)}
+          style={{
+            cursor: 'pointer',
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 16,
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            marginBottom: 16
+          }}
+        >
+          <div className="loc-name" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#111827', fontWeight: '600' }}>
+            <MapPin size={18} color="#16a34a" />
+            <span style={{ fontSize: 14 }}>{location.name}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#16a34a', fontSize: 12, fontWeight: '600' }}>
+            <span>Change</span>
+            <ChevronDown size={14} />
           </div>
         </div>
+
+        {/* Location Picker Modal / Overlay */}
+        {showLocationPicker && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center'
+          }}>
+            <div className="animate-in" style={{
+              background: '#fff',
+              width: '100%',
+              maxWidth: 480,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: '20px 20px 32px',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              boxShadow: '0 -4px 24px rgba(0,0,0,0.15)'
+            }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: '700', color: '#111827' }}>
+                  Select Location
+                </h3>
+                <button
+                  onClick={() => setShowLocationPicker(false)}
+                  style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                >
+                  <X size={18} color="#4b5563" />
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div style={{
+                position: 'relative',
+                marginBottom: 16
+              }}>
+                <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  placeholder="Search city, district, or region..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 42px',
+                    borderRadius: 12,
+                    border: '1px solid #d1d5db',
+                    fontSize: 14,
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Detect GPS Location Button */}
+              <button
+                onClick={handleDetectLocation}
+                disabled={locatingUser}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  color: '#15803d',
+                  fontSize: 14,
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  marginBottom: 16
+                }}
+              >
+                <Navigation size={16} />
+                {locatingUser ? "Detecting GPS location..." : "Use My Current Location"}
+              </button>
+
+              {/* Search Results List */}
+              {searching ? (
+                <div style={{ padding: '16px 0', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+                  Searching locations...
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>
+                    Search Results
+                  </div>
+                  {searchResults.map((res, i) => (
+                    <div
+                      key={i}
+                      onClick={() => handleSelectLocation(res)}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 10,
+                        borderBottom: '1px solid #f3f4f6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        color: '#1f2937'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <MapPin size={16} color="#16a34a" />
+                        <span>{res.name}</span>
+                      </div>
+                      {location.lat === res.lat && location.lon === res.lon && (
+                        <Check size={16} color="#16a34a" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : searchQuery.trim().length >= 2 ? (
+                <div style={{ padding: '12px 0', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>
+                  No locations found matching "{searchQuery}"
+                </div>
+              ) : null}
+
+              {/* Popular Agricultural Hubs */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>
+                  Popular Farming Hubs
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {POPULAR_HUBS.map((hub, i) => {
+                    const isSelected = location.name === hub.name
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleSelectLocation(hub)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 20,
+                          fontSize: 12,
+                          fontWeight: isSelected ? '700' : '500',
+                          background: isSelected ? '#16a34a' : '#f3f4f6',
+                          color: isSelected ? '#fff' : '#374151',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {hub.name.split(',')[0]}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Current Weather */}
         <div className="weather-current animate-in" style={{ animationDelay: '0.05s' }}>

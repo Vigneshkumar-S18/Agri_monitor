@@ -1,4 +1,5 @@
 const BASE_URL = "https://api.open-meteo.com/v1/forecast";
+const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 
 export async function getWeather(latitude, longitude) {
   const params = new URLSearchParams({
@@ -15,6 +16,36 @@ export async function getWeather(latitude, longitude) {
     throw new Error("Failed to fetch weather data");
   }
   return response.json();
+}
+
+export async function searchLocations(query) {
+  if (!query || query.trim().length < 2) return [];
+  
+  const params = new URLSearchParams({
+    name: query.trim(),
+    count: "6",
+    language: "en",
+    format: "json"
+  });
+
+  try {
+    const res = await fetch(`${GEOCODING_URL}?${params}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data.results) return [];
+
+    return data.results.map(item => ({
+      name: `${item.name}${item.admin1 ? `, ${item.admin1}` : ''}${item.country ? `, ${item.country}` : ''}`,
+      cityName: item.name,
+      state: item.admin1 || '',
+      country: item.country || '',
+      lat: item.latitude,
+      lon: item.longitude
+    }));
+  } catch (error) {
+    console.error("Geocoding search failed:", error);
+    return [];
+  }
 }
 
 // Helper to map WMO weather codes to emojis and descriptions
