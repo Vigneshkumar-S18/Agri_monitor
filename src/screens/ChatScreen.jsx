@@ -54,6 +54,9 @@ export default function ChatScreen() {
         text: res.reply,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         telemetry: res.telemetry_used,
+        intent: res.intent,
+        sourcesUsed: res.sources_used,
+        routingReason: res.routing_reason,
         citedTopics: res.cited_topics
       }
       setMessages(prev => [...prev, botMsg])
@@ -83,7 +86,7 @@ export default function ChatScreen() {
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: '700', color: '#0f172a' }}>AgriSense Assistant</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#16a34a', fontWeight: '500' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e' }}></span>
-              Connected to Field Telemetry & RAG
+              Query-Aware Agronomic Reasoning
             </div>
           </div>
         </div>
@@ -134,18 +137,44 @@ export default function ChatScreen() {
                 border: msg.sender === 'bot' ? '1px solid #e2e8f0' : 'none'
               }}
             >
+              {/* Intent & Data Sources Routing Badges */}
+              {msg.intent && msg.intent !== 'GREETING' && (
+                <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, fontWeight: '700', padding: '2px 8px', borderRadius: 12, background: '#e0f2fe', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                    🎯 {msg.intent.replace(/_/g, ' ')}
+                  </span>
+                  {msg.sourcesUsed && msg.sourcesUsed.map((src, i) => (
+                    <span key={i} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, background: '#f1f5f9', color: '#475569', fontWeight: '600' }}>
+                      ✓ {src}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               {msg.text}
 
               {/* Telemetry Used Badge */}
-              {msg.telemetry && (
+              {msg.telemetry && Object.keys(msg.telemetry).length > 0 && (
                 <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #e2e8f0', fontSize: 11, color: '#64748b' }}>
                   <div style={{ fontWeight: '700', marginBottom: 4, textTransform: 'uppercase', color: '#475569' }}>
                     Telemetry Cited:
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 6 }}>Soil: {msg.telemetry.soil_moisture}</span>
-                    <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 6 }}>Rain 6h: {msg.telemetry.rain_prob_6h}</span>
-                    <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 6 }}>Humidity: {msg.telemetry.humidity}</span>
+                    {msg.telemetry.soil_moisture && (
+                      <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 6 }}>Soil: {msg.telemetry.soil_moisture}</span>
+                    )}
+                    {msg.telemetry.rain_prob_6h && (
+                      <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 6 }}>Rain 6h: {msg.telemetry.rain_prob_6h}</span>
+                    )}
+                    {msg.telemetry.humidity && (
+                      <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 6 }}>Humidity: {msg.telemetry.humidity}</span>
+                    )}
+                    {msg.telemetry.temp && (
+                      <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 6 }}>Temp: {msg.telemetry.temp}</span>
+                    )}
+                    {msg.telemetry.disease_alert && (
+                      <span style={{ background: '#fee2e2', color: '#991b1b', padding: '2px 6px', borderRadius: 6 }}>Alert: {msg.telemetry.disease_alert}</span>
+                    )}
                   </div>
                 </div>
               )}
