@@ -16,6 +16,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home')
   const [selectedSensor, setSelectedSensor] = useState(null)
   const [showAnalysis, setShowAnalysis] = useState(false)
+  const [scanResult, setScanResult] = useState(null)
 
   // Splash -> Login transition
   const handleSplashEnd = () => setCurrentScreen('login')
@@ -39,8 +40,14 @@ export default function App() {
   }
 
   // Scan result navigation
-  const handleShowAnalysis = () => setShowAnalysis(true)
-  const handleBackFromAnalysis = () => setShowAnalysis(false)
+  const handleShowAnalysis = (result) => {
+    setScanResult(result)
+    setShowAnalysis(true)
+  }
+  const handleBackFromAnalysis = () => {
+    setShowAnalysis(false)
+    setScanResult(null)
+  }
 
   // Tab change
   const handleTabChange = (tab) => {
@@ -89,7 +96,7 @@ export default function App() {
         return <HomeScreen onSensorClick={handleSensorClick} />
       case 'scan':
         if (showAnalysis) {
-          return <AnalysisResult onBack={handleBackFromAnalysis} />
+          return <AnalysisResult result={scanResult} onBack={handleBackFromAnalysis} />
         }
         return <ScanScreen onAnalyze={handleShowAnalysis} />
       case 'weather':

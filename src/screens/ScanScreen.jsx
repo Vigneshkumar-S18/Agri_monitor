@@ -1,7 +1,41 @@
-import React from 'react'
-import { ArrowLeft, Camera, Image, Sparkles, Sun, Target } from 'lucide-react'
+import React, { useState, useRef } from 'react'
+import { ArrowLeft, Camera, Image as ImageIcon, Sparkles, Sun, Target, Loader2 } from 'lucide-react'
+import { analyzeCrop } from '../services/cropAnalysis'
 
 export default function ScanScreen({ onAnalyze }) {
+  const [loading, setLoading] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setLoading(true)
+    try {
+      // Pass the actual file plus some contextual mock data
+      const result = await analyzeCrop(file, {
+        soilMoisture: 32,
+        temperature: 28,
+        humidity: 86,
+        rainProbability: 78
+      })
+      
+      // Pass the API result back to the parent (App)
+      onAnalyze(result)
+    } catch (error) {
+      console.error("Failed to analyze crop:", error)
+      alert("Failed to analyze crop. Is the backend running?")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div>
       <div className="screen-header">
@@ -71,6 +105,24 @@ export default function ScanScreen({ onAnalyze }) {
                 opacity: 0.5
               }}></div>
             </div>
+            
+            {loading && (
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(0,0,0,0.5)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                zIndex: 10
+              }}>
+                <Loader2 className="spin" size={48} style={{ marginBottom: 16 }} />
+                <h3>Analyzing Crop...</h3>
+                <p>Running AI Vision Model</p>
+              </div>
+            )}
           </div>
           <div className="scan-corners"></div>
           <div className="scan-corners-bottom"></div>
@@ -93,18 +145,37 @@ export default function ScanScreen({ onAnalyze }) {
           </div>
         </div>
 
+        {/* Hidden File Input */}
+        <input 
+          type="file" 
+          accept="image/*" 
+          ref={fileInputRef} 
+          style={{ display: 'none' }} 
+          onChange={handleFileChange}
+        />
+
         {/* Action Buttons */}
         <div className="scan-actions animate-in" style={{ animationDelay: '0.2s' }}>
-          <button className="btn-capture" onClick={onAnalyze}>
+          <button className="btn-capture" onClick={handleUploadClick} disabled={loading}>
             <Camera />
             Capture Photo
           </button>
-          <button className="btn-upload" onClick={onAnalyze}>
-            <Image />
+          <button className="btn-upload" onClick={handleUploadClick} disabled={loading}>
+            <ImageIcon />
             Upload from Gallery
           </button>
         </div>
       </div>
+      
+      <style>{`
+        .spin {
+          animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }
