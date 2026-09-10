@@ -5,7 +5,15 @@ import io
 from services.crop_validator import validate_tomato_image
 from services.disease_model import predict_disease
 from services.decision_engine import analyze_crop_state
-from typing import Optional
+from services.chat_agent import build_agronomic_context, generate_agricultural_response
+from typing import Optional, Dict, Any
+from pydantic import BaseModel
+
+class ChatRequest(BaseModel):
+    message: str
+    sensor_data: Optional[Dict[str, Any]] = None
+    weather_data: Optional[Dict[str, Any]] = None
+    latest_scan: Optional[Dict[str, Any]] = None
 
 app = FastAPI(
     title="AgriSense API"
@@ -23,6 +31,22 @@ app.add_middleware(
 def root():
     return {
         "message": "AgriSense API is running"
+    }
+
+@app.post("/chat")
+async def chat_with_agrisense(req: ChatRequest):
+    context = build_agronomic_context(
+        user_query=req.message,
+        sensor_data=req.sensor_data,
+        weather_data=req.weather_data,
+        latest_scan=req.latest_scan
+    )
+    result = generate_agricultural_response(req.message, context)
+    return {
+        "success": True,
+        "reply": result["reply"],
+        "telemetry_used": result["telemetry_used"],
+        "cited_topics": result["cited_topics"]
     }
 
 @app.post("/analyze")
@@ -81,4 +105,5 @@ async def analyze_crop(
         "predictions": predictions,
         "analysis": analysis
     }
+
 

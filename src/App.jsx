@@ -9,6 +9,7 @@ import WeatherScreen from './screens/WeatherScreen.jsx'
 import AlertsScreen from './screens/AlertsScreen.jsx'
 import RecommendScreen from './screens/RecommendScreen.jsx'
 import IrrigationScreen from './screens/IrrigationScreen.jsx'
+import ChatScreen from './screens/ChatScreen.jsx'
 import BottomNav from './components/BottomNav.jsx'
 
 export default function App() {
@@ -99,6 +100,8 @@ export default function App() {
           return <AnalysisResult result={scanResult} onBack={handleBackFromAnalysis} />
         }
         return <ScanScreen onAnalyze={handleShowAnalysis} />
+      case 'chat':
+        return <ChatScreen />
       case 'weather':
         return <WeatherScreen />
       case 'alerts':
