@@ -49,7 +49,7 @@ export default function RecommendScreen({ onBack, onNavigateToChat }) {
       },
       organic: {
         name: 'Wood Ash Extract + Fermented Banana Peel + FYM',
-        image: '/assets/wood_ash_banana_organic.svg',
+        image: '/assets/banana_woodash_extract.svg',
         points: [
           'Rich in bio-available organic potassium',
           'Enhances fruit ripening and sweetness naturally',
@@ -137,7 +137,7 @@ export default function RecommendScreen({ onBack, onNavigateToChat }) {
       },
       organic: {
         name: 'Phosphate Rich Organic Manure (PROM) / Bone Meal',
-        image: '/assets/prom_organic.svg',
+        image: '/assets/prom_organic_manure.svg',
         points: [
           'High organic phosphorus bioavailability',
           'Safe for beneficial mycorrhizal soil fungi',
@@ -363,13 +363,14 @@ export default function RecommendScreen({ onBack, onNavigateToChat }) {
           </div>
 
           {/* Fertilizer Card */}
-          <div className="rec-card-box">
+          <div className="rec-card-box animate-fade" key={`chem-${current.key}`}>
             <div className="card-top-row">
               <div className="card-img-container">
                 <img
+                  key={current.fertilizer.image}
                   src={current.fertilizer.image}
                   alt={current.fertilizer.name}
-                  className="fertilizer-bag-image"
+                  className="fertilizer-bag-image animate-fade"
                 />
               </div>
               <div className="card-top-info">
@@ -423,13 +424,14 @@ export default function RecommendScreen({ onBack, onNavigateToChat }) {
           </div>
 
           {/* Organic Card */}
-          <div className="rec-card-box">
+          <div className="rec-card-box animate-fade" key={`org-${current.key}`}>
             <div className="card-top-row organic">
               <div className="compost-img-container">
                 <img
+                  key={current.organic.image}
                   src={current.organic.image}
                   alt={current.organic.name}
-                  className="compost-image"
+                  className="compost-image animate-fade"
                 />
               </div>
               <div className="card-top-info">

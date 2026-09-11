@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bioBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7" />
+      <stop offset="100%" stop-color="#fde68a" />
+    </linearGradient>
+
+    <!-- Liquid Extract Bottle Gradient -->
+    <linearGradient id="extractLiquid" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#78350f" />
+      <stop offset="35%" stop-color="#92400e" />
+      <stop offset="70%" stop-color="#b45309" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <!-- Banana Peel Yellow Gradient -->
+    <linearGradient id="bananaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="50%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+
+    <!-- Wood Ash Charcoal Gradient -->
+    <linearGradient id="ashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b" />
+      <stop offset="50%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#78350f" flood-opacity="0.2" />
+    </filter>
+  </defs>
+
+  <rect width="200" height="160" rx="8" fill="#fffbeb" />
+
+  <g clip-path="url(#bioClip)">
+    <clipPath id="bioClip">
+      <rect width="200" height="160" rx="8" />
+    </clipPath>
+
+    <!-- Background farm sunburst / soft circle -->
+    <circle cx="100" cy="140" r="95" fill="url(#bioBg)" opacity="0.6" />
+
+    <!-- Organic Soil Ground Line -->
+    <path d="M 0 135 Q 100 130 200 135 L 200 160 L 0 160 Z" fill="#78350f" opacity="0.15" />
+
+    <!-- 1. Wood Ash Pile (Left Side) -->
+    <g transform="translate(18, 92)" filter="url(#softShadow)">
+      <!-- Ash mound -->
+      <path d="M 0 42 C 6 22, 24 10, 42 10 C 60 10, 78 22, 84 42 Z" fill="url(#ashGrad)" />
+      <!-- Charcoal embers texture -->
+      <circle cx="36" cy="24" r="2" fill="#94a3b8" />
+      <circle cx="48" cy="28" r="2.5" fill="#cbd5e1" />
+      <circle cx="28" cy="34" r="1.5" fill="#94a3b8" />
+      <circle cx="58" cy="36" r="2" fill="#cbd5e1" />
+      <!-- Small Ash Label -->
+      <rect x="18" y="28" width="48" height="11" rx="4" fill="#1e293b" opacity="0.85" />
+      <text x="42" y="36.5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="800" text-anchor="middle" fill="#f8fafc">WOOD ASH</text>
+    </g>
+
+    <!-- 2. Fermented Bio-Extract Container (Center) -->
+    <g transform="translate(108, 30)" filter="url(#softShadow)">
+      <!-- Container Cap / Cork -->
+      <rect x="22" y="0" width="18" height="8" rx="2" fill="#a16207" stroke="#78350f" stroke-width="0.8" />
+      <rect x="26" y="8" width="10" height="6" fill="#ca8a04" />
+      
+      <!-- Container Neck & Shoulder -->
+      <path d="M 24 14 L 38 14 C 48 18, 56 26, 56 36 L 56 94 C 56 100, 50 104, 31 104 C 12 104, 6 100, 6 94 L 6 36 C 6 26, 14 18, 24 14 Z" 
+            fill="url(#extractLiquid)" stroke="#78350f" stroke-width="1" />
+
+      <!-- Bottle Glass Reflection -->
+      <path d="M 12 36 L 12 92" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.4" />
+      <path d="M 18 36 L 18 90" stroke="#ffffff" stroke-width="0.8" stroke-linecap="round" opacity="0.3" />
+
+      <!-- Amber Label on Bottle -->
+      <rect x="10" y="44" width="42" height="38" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="0.8" />
+      <!-- Potassium Badge -->
+      <circle cx="31" cy="56" r="8" fill="#ea580c" />
+      <text x="31" y="60" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="900" text-anchor="middle" fill="#ffffff">K+</text>
+      <text x="31" y="71" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" font-weight="800" text-anchor="middle" fill="#78350f">POTASSIUM</text>
+      <text x="31" y="78" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="5.5" font-weight="700" text-anchor="middle" fill="#16a34a">BIO-EXTRACT</text>
+    </g>
+
+    <!-- 3. Organic Banana Peels (Front Right/Center) -->
+    <g transform="translate(62, 90)" filter="url(#softShadow)">
+      <!-- Banana Peel 1 Curve -->
+      <path d="M 10 32 C 18 14, 42 12, 54 26 C 46 22, 26 24, 18 36 Z" fill="url(#bananaGrad)" />
+      <!-- Banana Peel 2 Outer Leaf -->
+      <path d="M 18 36 C 28 20, 52 18, 68 34 C 54 28, 34 32, 24 44 Z" fill="#eab308" />
+      <!-- Banana Crown stem -->
+      <path d="M 10 32 C 8 35, 6 38, 12 40 C 14 36, 12 33, 10 32 Z" fill="#713f12" />
+      <!-- Organic spotting marks -->
+      <circle cx="32" cy="22" r="1.2" fill="#78350f" opacity="0.6" />
+      <circle cx="48" cy="24" r="1" fill="#78350f" opacity="0.6" />
+      <circle cx="40" cy="30" r="1.5" fill="#78350f" opacity="0.5" />
+    </g>
+
+    <!-- Natural Sprout Emblem in Corner -->
+    <g transform="translate(12, 16) scale(0.7)">
+      <circle cx="16" cy="16" r="14" fill="#dcfce7" />
+      <path d="M 16 22 L 16 10 M 16 14 C 12 10 8 12 8 16 C 12 16 15 15 16 14 Z M 16 12 C 20 8 24 10 24 14 C 20 14 17 13 16 12 Z" fill="#16a34a" stroke="#16a34a" stroke-width="1.2" />
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" width="100%" height="100%">
+  <defs>
+    <linearGradient id="promBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f5f3ff" />
+      <stop offset="100%" stop-color="#ede9fe" />
+    </linearGradient>
+
+    <linearGradient id="soilPileGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b2014" />
+      <stop offset="50%" stop-color="#27140b" />
+      <stop offset="100%" stop-color="#180a04" />
+    </linearGradient>
+
+    <linearGradient id="rockPhosphate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c4b5fd" />
+      <stop offset="50%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#7e22ce" />
+    </linearGradient>
+
+    <filter id="promShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#180a04" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <rect width="200" height="160" rx="8" fill="#faf5ff" />
+
+  <g clip-path="url(#promClip)">
+    <clipPath id="promClip">
+      <rect width="200" height="160" rx="8" />
+    </clipPath>
+
+    <rect width="200" height="160" fill="url(#promBg)" />
+    
+    <!-- Farm Ground -->
+    <path d="M 0 130 Q 100 126 200 130 L 200 160 L 0 160 Z" fill="#7e22ce" opacity="0.1" />
+
+    <!-- Organic PROM Compost Heap with enriched mineral granules -->
+    <g transform="translate(15, 30)" filter="url(#promShadow)">
+      <!-- Main compost mound -->
+      <path d="M 5 105 C 15 65, 45 40, 85 30 C 125 40, 155 65, 165 105 Z" fill="url(#soilPileGrad)" />
+      
+      <!-- Top layer highlights -->
+      <path d="M 45 60 C 65 48, 105 48, 125 60 C 140 75, 148 90, 150 104 C 115 95, 65 95, 20 104 C 22 90, 30 75, 45 60 Z" fill="#4a2a1a" opacity="0.8" />
+
+      <!-- Phosphate Mineral Crystals / PROM granules embedded in compost -->
+      <circle cx="65" cy="55" r="3.5" fill="url(#rockPhosphate)" />
+      <circle cx="105" cy="50" r="4" fill="url(#rockPhosphate)" />
+      <circle cx="85" cy="70" r="3" fill="url(#rockPhosphate)" />
+      <circle cx="130" cy="75" r="3.5" fill="url(#rockPhosphate)" />
+      <circle cx="40" cy="85" r="3" fill="url(#rockPhosphate)" />
+      <circle cx="110" cy="88" r="4" fill="url(#rockPhosphate)" />
+      <circle cx="70" cy="92" r="2.5" fill="url(#rockPhosphate)" />
+
+      <!-- PROM Badge on pile -->
+      <g transform="translate(48, 72)">
+        <rect x="0" y="0" width="74" height="20" rx="6" fill="#ffffff" stroke="#a855f7" stroke-width="1.2" />
+        <text x="37" y="14" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="900" text-anchor="middle" fill="#7e22ce">ORGANIC P+</text>
+      </g>
+    </g>
+
+    <!-- Bio-Root Inoculant Badge -->
+    <g transform="translate(10, 12)">
+      <rect x="0" y="0" width="80" height="16" rx="8" fill="#f3e8ff" stroke="#d8b4fe" stroke-width="0.8" />
+      <text x="40" y="11.5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="800" text-anchor="middle" fill="#6b21a8">🌱 VAM &amp; BONE MEAL</text>
+    </g>
+  </g>
+</svg>
