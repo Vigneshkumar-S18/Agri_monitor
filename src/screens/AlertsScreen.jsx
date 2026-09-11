@@ -1,3 +1,4 @@
+import React, { useState } from 'react'
 import {
   AlertTriangle, Droplets, Thermometer, Leaf, 
   Shield, Beaker, ChevronRight, ArrowLeft,
