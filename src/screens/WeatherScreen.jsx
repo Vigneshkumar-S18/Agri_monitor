@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { MapPin, Droplets, Wind, Eye, Thermometer, Search, Navigation, X, Check, ChevronDown } from 'lucide-react'
+import { MapPin, Droplets, Wind, Eye, Thermometer, Search, Navigation, X, Check, ChevronDown, ArrowLeft } from 'lucide-react'
 import { getWeather, getWeatherMapping, searchLocations } from '../services/weatherService'
 
 const POPULAR_HUBS = [
@@ -12,7 +12,7 @@ const POPULAR_HUBS = [
   { name: 'Shimla, Himachal Pradesh', lat: 31.1048, lon: 77.1734 }
 ]
 
-export default function WeatherScreen() {
+export default function WeatherScreen({ onBack }) {
   const [weatherData, setWeatherData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -182,7 +182,28 @@ export default function WeatherScreen() {
   return (
     <div>
       <div className="screen-header">
-        <h1 style={{ flex: 1, textAlign: 'center' }}>Weather</h1>
+        {onBack && (
+          <button
+            className="back-btn"
+            onClick={onBack}
+            aria-label="Back to Home"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 8,
+              color: 'var(--gray-700)'
+            }}
+          >
+            <ArrowLeft size={20} />
+          </button>
+        )}
+        <h1 style={{ flex: 1, textAlign: 'center', margin: 0, fontSize: 18, fontWeight: 700 }}>Weather</h1>
+        {onBack && <div style={{ width: 32 }} />}
       </div>
 
       <div className="weather-screen">

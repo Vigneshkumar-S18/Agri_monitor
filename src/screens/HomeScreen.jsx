@@ -71,19 +71,19 @@ const sensorData = [
   },
   {
     id: 'npk',
-    name: 'NPK (Estimated)',
-    value: 'N:56 P:32 K:41',
-    status: 'Moderate',
-    statusClass: 'moderate',
+    name: 'NPK Sensor',
+    value: 'N:32 P:24 K:36',
+    status: 'Low N/P',
+    statusClass: 'warning',
     iconClass: 'npk',
     icon: Leaf,
-    unit: '',
-    numValue: 56,
-    chartData: [50, 52, 54, 55, 56, 55, 54, 53, 52, 51, 50, 52, 54, 56, 55, 54, 53, 52, 54, 56, 55, 54, 53, 56],
-    min: { value: '50', time: '06:00 AM' },
-    max: { value: '56', time: '10:00 AM' },
-    avg: '53',
-    insight: 'NPK levels are moderate. Consider supplemental fertilizer for Phosphorus and Potassium.'
+    unit: 'mg/kg',
+    numValue: 32,
+    chartData: [45, 42, 40, 38, 36, 35, 34, 33, 32, 32, 31, 32, 32, 33, 32, 32, 31, 32, 32, 33, 32, 32, 32, 32],
+    min: { value: '24 mg/kg', time: '06:00 AM' },
+    max: { value: '45 mg/kg', time: 'Yesterday' },
+    avg: '32 mg/kg',
+    insight: 'Nitrogen and Phosphorus levels are below optimum for flowering. Tap to view AI Fertilizer & Organic advice.'
   },
   {
     id: 'tds',
@@ -103,7 +103,7 @@ const sensorData = [
   }
 ]
 
-export default function HomeScreen({ onSensorClick }) {
+export default function HomeScreen({ onSensorClick, onWeatherClick, onAlertsClick }) {
   const now = new Date()
   const dateStr = now.toLocaleDateString('en-US', { 
     month: 'short', day: 'numeric', year: 'numeric' 
@@ -118,7 +118,12 @@ export default function HomeScreen({ onSensorClick }) {
       <div className="home-header">
         <div className="home-greeting">
           <h2>Good Morning, Farmer! 👋</h2>
-          <button className="notification-btn">
+          <button
+            className="notification-btn"
+            onClick={onAlertsClick}
+            title="View alerts and notifications"
+            aria-label="Alerts"
+          >
             <Bell />
             <span className="notification-dot"></span>
           </button>
@@ -128,7 +133,13 @@ export default function HomeScreen({ onSensorClick }) {
             <MapPin />
             <span>My Tomato Farm ▾</span>
           </div>
-          <div className="weather-badge">
+          <div
+            className="weather-badge"
+            onClick={onWeatherClick}
+            title="Click to view detailed weather forecast"
+            role="button"
+            tabIndex={0}
+          >
             <span className="weather-icon">⛅</span>
             <span>28°C</span>
             <span style={{ fontSize: 11, color: 'var(--gray-500)' }}>Partly Cloudy</span>

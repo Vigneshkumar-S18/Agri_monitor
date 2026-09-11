@@ -5,8 +5,6 @@ const tabs = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'scan', label: 'Scan', icon: Scan },
   { id: 'chat', label: 'Advisor', icon: Bot },
-  { id: 'weather', label: 'Weather', icon: Cloud },
-  { id: 'alerts', label: 'Alerts', icon: Bell },
   { id: 'recommend', label: 'Recommend', icon: Sprout },
   { id: 'irrigation', label: 'Irrigation', icon: Droplets },
 ]

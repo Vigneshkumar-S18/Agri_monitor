@@ -2,100 +2,69 @@ import os
 import json
 from typing import Dict, Any, List, Optional
 from services.query_router import route_query
+from services.context_manager import build_scoped_context
 from services.knowledge_base import query_knowledge_base
+from services.fertilizer_service import recommend_fertilizer
 
+
+# Backward compatibility alias
 def build_agronomic_context(
     user_query: str,
     route: Dict[str, Any],
     sensor_data: Optional[Dict[str, Any]] = None,
     weather_data: Optional[Dict[str, Any]] = None,
     latest_scan: Optional[Dict[str, Any]] = None,
-    crop_history: Optional[Dict[str, Any]] = None
+    crop_history: Optional[Dict[str, Any]] = None,
+    conversation_history: Optional[List[Dict[str, str]]] = None
+) -> Dict[str, Any]:
+    return build_scoped_context(
+        user_query=user_query,
+        route=route,
+        sensor_data=sensor_data,
+        weather_data=weather_data,
+        latest_scan=latest_scan,
+        crop_history=crop_history,
+        conversation_history=conversation_history
+    )
+
+def generate_agricultural_response(
+    user_query: str,
+    route: Dict[str, Any],
+    context: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Selectively gathers ONLY the required data sources determined by the Query Router.
-    Data sources: SENSOR, WEATHER, DISEASE_SCAN, CROP_HISTORY, RAG_KNOWLEDGE
-    """
-    context: Dict[str, Any] = {
-        "intent": route["intent"],
-        "sources": route["sources"],
-        "reason": route["reason"]
-    }
-    sources = set(route.get("sources", []))
-
-    # 1. IoT Sensor Telemetry (Only if requested)
-    if "SENSOR" in sources:
-        context["sensors"] = {
-            "soil_moisture": sensor_data.get("soil_moisture", 28) if sensor_data else 28,
-            "temperature": sensor_data.get("temperature", 31) if sensor_data else 31,
-            "humidity": sensor_data.get("humidity", 76) if sensor_data else 76,
-            "water_quality": sensor_data.get("water_quality", "Good") if sensor_data else "Good",
-            "crop": "Tomato",
-            "growth_stage": "Flowering & Fruit Setting"
-        }
-
-    # 2. Weather Forecast Telemetry (Only if requested)
-    if "WEATHER" in sources:
-        context["weather"] = {
-            "rain_probability_6h": weather_data.get("rain_probability_6h", 82) if weather_data else 82,
-            "rain_probability_24h": weather_data.get("rain_probability_24h", 91) if weather_data else 91,
-            "temperature": weather_data.get("temperature", 31) if weather_data else 31,
-            "humidity": weather_data.get("humidity", 76) if weather_data else 76,
-            "forecast_desc": weather_data.get("forecast_desc", "Scattered thunderstorms expected") if weather_data else "Scattered thunderstorms expected",
-            "location": weather_data.get("location", "Coimbatore, Tamil Nadu") if weather_data else "Coimbatore, Tamil Nadu"
-        }
-
-    # 3. Disease Vision Scan (Only if requested)
-    if "DISEASE_SCAN" in sources:
-        context["scan"] = latest_scan or {
-            "disease": "Late blight",
-            "confidence": 88.5,
-            "severity": "Moderate",
-            "future_risk": "HIGH"
-        }
-
-    # 4. Crop History (Only if requested)
-    if "CROP_HISTORY" in sources:
-        context["history"] = crop_history or {
-            "planting_date": "28 days ago",
-            "variety": "Arka Rakshak (Tomato)",
-            "last_irrigation": "2 days ago",
-            "last_spray": "Neem oil (5 days ago)"
-        }
-
-    # 5. Domain Knowledge (RAG)
-    if route.get("rag_required", False):
-        context["knowledge_docs"] = query_knowledge_base(user_query, top_k=2)
-    else:
-        context["knowledge_docs"] = []
-
-    return context
-
-def generate_agricultural_response(user_query: str, route: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Generates a contextual response using the routed information.
-    Uses OpenAI LLM if configured, otherwise falls back to AgriSense Precision Agronomic Engine.
+    Generates a contextual response using strictly scoped data.
+    Uses OpenAI LLM if configured, otherwise executes the AgriSense Precision Agronomic Engine.
     """
     intent = route.get("intent", "GENERAL_AGRICULTURE")
-    sources = set(route.get("sources", []))
+    sources = set(route.get("required_sources") or route.get("sources") or [])
+    entities = route.get("entities", {})
     docs = context.get("knowledge_docs", [])
-    cited_topics = [d["topic"] for d in docs]
+    cited_topics = [d["topic"] for d in docs] if docs else []
 
     # Build telemetry_used metadata map for observability and UI display
     telemetry_used: Dict[str, Any] = {}
     if "sensors" in context:
-        telemetry_used["soil_moisture"] = f"{context['sensors']['soil_moisture']}%"
-        telemetry_used["temp"] = f"{context['sensors']['temperature']}°C"
+        telemetry_used["soil_moisture"] = f"{context['sensors'].get('soil_moisture')}%"
+        telemetry_used["temp"] = f"{context['sensors'].get('temperature')}°C"
+        if "humidity" in context["sensors"]:
+            telemetry_used["humidity"] = f"{context['sensors']['humidity']}%"
     if "weather" in context:
-        telemetry_used["rain_prob_6h"] = f"{context['weather']['rain_probability_6h']}%"
+        w = context["weather"]
+        if "rain_probability" in w:
+            telemetry_used["rain_prob"] = f"{w['rain_probability']}%"
+        elif "rain_probability_6h" in w:
+            telemetry_used["rain_prob_6h"] = f"{w['rain_probability_6h']}%"
+        if "rain_probability_24h" in w:
+            telemetry_used["rain_prob_24h"] = f"{w['rain_probability_24h']}%"
     if "scan" in context:
-        telemetry_used["disease_alert"] = context["scan"]["disease"]
+        telemetry_used["disease_alert"] = context["scan"].get("disease")
 
     # =========================================================================
     # OPTION A: OpenAI LLM Explanation Layer (if API key is present)
     # =========================================================================
     openai_key = os.environ.get("OPENAI_API_KEY")
-    if openai_key and intent != "GREETING":
+    if openai_key and intent not in ["GREETING"]:
         try:
             import urllib.request
             headers = {
@@ -103,26 +72,29 @@ def generate_agricultural_response(user_query: str, route: Dict[str, Any], conte
                 "Authorization": f"Bearer {openai_key}"
             }
             system_prompt = (
-                "You are AgriSense, an expert precision agronomic AI assistant for tomato farmers. "
-                "CRITICAL INSTRUCTION: Answer ONLY the user's specific query using the provided context. "
-                "Do NOT invent or mention unrelated data sources (e.g. do not discuss disease or rainfall if the user asked only about soil or greetings). "
-                "Keep recommendations clear, direct, and actionable."
+                "You are AgriSense, an expert precision agronomic AI assistant for tomato farmers.\n"
+                "CRITICAL INSTRUCTIONS:\n"
+                "1. Answer ONLY the user's specific query using the provided context.\n"
+                "2. If intent is OUT_OF_DOMAIN, answer the general question politely and succinctly, then gently invite them to ask about tomato crop management.\n"
+                "3. If intent is WEATHER, provide the weather forecast without bringing up soil moisture or disease unless explicitly asked.\n"
+                "4. Do NOT invent or hallucinate data that was not provided in the scoped context.\n"
+                "5. Keep recommendations clear, direct, empathetic, and actionable for farmers."
             )
-            
+
             context_blocks = []
             if "sensors" in context:
                 s = context["sensors"]
-                context_blocks.append(f"FIELD SENSORS: Soil Moisture={s['soil_moisture']}%, Temp={s['temperature']}°C, Humidity={s['humidity']}%, Crop Stage={s['growth_stage']}")
+                context_blocks.append(f"FIELD SENSORS: Soil Moisture={s.get('soil_moisture')}%, Temp={s.get('temperature')}°C, Humidity={s.get('humidity')}%, Crop Stage={s.get('growth_stage')}")
             if "weather" in context:
                 w = context["weather"]
-                context_blocks.append(f"WEATHER ({w['location']}): Rain Prob 6h={w['rain_probability_6h']}%, Rain Prob 24h={w['rain_probability_24h']}%, Forecast={w['forecast_desc']}")
+                context_blocks.append(f"WEATHER ({w.get('location')} - {w.get('target_day', 'Today')}): Rain Prob={w.get('rain_probability', w.get('rain_probability_6h'))}%, Temp={w.get('temperature')}°C, Forecast={w.get('forecast_desc')}")
             if "scan" in context:
                 sc = context["scan"]
-                context_blocks.append(f"CROP SCAN: Disease={sc['disease']} (Confidence={sc['confidence']}%, Risk={sc['future_risk']})")
+                context_blocks.append(f"CROP SCAN: Disease={sc.get('disease')} (Confidence={sc.get('confidence')}%, Risk={sc.get('future_risk')})")
             if docs:
-                context_blocks.append("AGRONOMIC KNOWLEDGE:\n" + "\n".join([f"- {d['topic']}: {d['content']}" for d in docs]))
+                context_blocks.append("AGRONOMIC KNOWLEDGE BASE:\n" + "\n".join([f"- {d['topic']}: {d['content']}" for d in docs]))
 
-            context_str = "\n\n".join(context_blocks)
+            context_str = "\n\n".join(context_blocks) if context_blocks else "No telemetry needed for this query."
             user_prompt = f"INTENT: {intent}\n\nRETRIEVED CONTEXT:\n{context_str}\n\nFARMER QUERY: {user_query}"
 
             payload = {
@@ -140,24 +112,54 @@ def generate_agricultural_response(user_query: str, route: Dict[str, Any], conte
                 return {
                     "reply": ai_text,
                     "intent": intent,
-                    "sources_used": route.get("sources", []),
+                    "sources_used": list(sources),
                     "routing_reason": route.get("reason", ""),
                     "telemetry_used": telemetry_used,
                     "cited_topics": cited_topics
                 }
         except Exception as e:
-            print(f"OpenAI call fallback: {e}")
+            print(f"[ChatAgent] OpenAI call fallback to deterministic engine: {e}")
 
     # =========================================================================
     # OPTION B: AgriSense Precision Agronomic Engine (Local Deterministic)
     # =========================================================================
 
-    # 1. GREETING
-    if intent == "GREETING":
+    # 1. OUT_OF_DOMAIN
+    if intent == "OUT_OF_DOMAIN":
+        q_lower = user_query.lower()
+        if "love" in q_lower:
+            reply = (
+                "❤️ **Love** is a deep emotional bond involving affection, care, attachment, empathy, and mutual understanding between people.\n\n"
+                "I am **AgriSense**, an AI assistant specialized in precision tomato farming. Feel free to ask me anything about your crop, live soil moisture, upcoming weather, irrigation decisions, disease diagnosis, or fertilizer guidance!"
+            )
+        elif "who are you" in q_lower or "who is" in q_lower:
+            reply = (
+                "I am **AgriSense Assistant**, your dedicated AI agronomist for smart tomato farming.\n\n"
+                "I can assist you with:\n"
+                "• Live IoT soil moisture analysis\n"
+                "• Weather and rain probability forecasts\n"
+                "• Intelligent irrigation planning\n"
+                "• Leaf disease diagnosis and treatment\n"
+                "• Growth-stage fertilizer and NPK scheduling"
+            )
+        else:
+            reply = (
+                "That falls outside my core domain of agricultural and farm management.\n\n"
+                "I am specialized in precision tomato farming. I would love to help you with:\n"
+                "• **Weather & Rain Forecasts**\n"
+                "• **Soil Moisture Status**\n"
+                "• **Irrigation Recommendations**\n"
+                "• **Tomato Leaf Disease Diagnosis**\n"
+                "• **Fertilizer & Nutrition Guidance**\n\n"
+                "What would you like to check regarding your crop?"
+            )
+
+    # 2. GREETING
+    elif intent == "GREETING":
         reply = (
-            "👋 Hello! I am your **AgriSense Precision Agricultural Assistant**.\n\n"
+            "👋 Hello! I am your **AgriSense Agricultural Assistant**.\n\n"
             "I can help you with:\n"
-            "• **Irrigation Guidance** (correlating soil moisture & rain probability)\n"
+            "• **Irrigation Decisions** (correlating soil moisture & rain probability)\n"
             "• **Weather Forecasts** (upcoming precipitation & humidity)\n"
             "• **Soil Moisture Status** (live IoT telemetry)\n"
             "• **Tomato Disease Diagnosis & Treatment** (Early/Late Blight, Septoria, etc.)\n"
@@ -166,122 +168,205 @@ def generate_agricultural_response(user_query: str, route: Dict[str, Any], conte
             "What would you like to know about your crop today?"
         )
 
-    # 2. SOIL STATUS (Sensor Only)
-    elif intent == "SOIL_STATUS":
-        s = context.get("sensors", {"soil_moisture": 28, "temperature": 31, "growth_stage": "Flowering & Fruit Setting"})
-        moisture = s["soil_moisture"]
-        if moisture < 35:
-            status_desc = f"**{moisture}%**, which is **below the optimal target range of 35%–55%** for tomatoes in the {s['growth_stage']} phase. The soil is currently relatively dry."
-        elif moisture > 55:
-            status_desc = f"**{moisture}%**, which is **above optimal range (35%–55%)**, indicating saturated soil."
-        else:
-            status_desc = f"**{moisture}%**, which is **within the healthy target range (35%–55%)**."
-            
-        reply = (
-            f"🌱 **Soil Moisture Telemetry:**\n\n"
-            f"Your current soil moisture reading is {status_desc}\n\n"
-            f"• **Current Moisture:** {moisture}%\n"
-            f"• **Target Range:** 35% – 55%\n"
-            f"• **Crop Phase:** {s['growth_stage']}"
-        )
-
-    # 3. WEATHER QUERY (Weather Only)
-    elif intent == "WEATHER_QUERY":
+    # 3. WEATHER ONLY
+    elif intent == "WEATHER":
         w = context.get("weather", {
+            "target_day": "Today",
+            "rain_probability": 82,
             "rain_probability_6h": 82,
             "rain_probability_24h": 91,
             "temperature": 31,
             "humidity": 76,
-            "forecast_desc": "Scattered thunderstorms expected",
+            "forecast_desc": "Scattered showers expected",
             "location": "Coimbatore, Tamil Nadu"
         })
+        target_day = w.get("target_day", "Today")
+        rain_p = w.get("rain_probability", w.get("rain_probability_6h", 82))
+        temp = w.get("temperature", 31)
+        humidity = w.get("humidity", 76)
+        loc = w.get("location", "Coimbatore, Tamil Nadu")
+        desc = w.get("forecast_desc", "Localized rainfall expected")
+
+        if target_day.lower() == "tomorrow":
+            reply = (
+                f"🌧️ **Tomorrow's Weather & Rain Forecast for {loc}:**\n\n"
+                f"• **Rain Probability:** **{rain_p}%**\n"
+                f"• **Forecast Condition:** {desc}\n"
+                f"• **Expected Temperature:** ~{temp}°C\n"
+                f"• **Relative Humidity:** {humidity}%\n\n"
+                f"💡 **Agronomic Note:** Rain is expected to be likely tomorrow. If you are planning field operations or irrigation, this incoming precipitation should be taken into account."
+            )
+        else:
+            rain_6h = w.get("rain_probability_6h", 82)
+            rain_24h = w.get("rain_probability_24h", 91)
+            reply = (
+                f"🌧️ **Weather Forecast for {loc}:**\n\n"
+                f"• **Rain Probability (Next 6 Hours):** **{rain_6h}%**\n"
+                f"• **Rain Probability (Next 24 Hours):** **{rain_24h}%**\n"
+                f"• **Temperature:** {temp}°C\n"
+                f"• **Humidity:** {humidity}%\n"
+                f"• **Forecast Condition:** {desc}\n\n"
+                f"💡 **Agronomic Note:** High precipitation chance will provide natural moisture and increase canopy wetness."
+            )
+
+    # 4. SOIL STATUS (Sensor Only)
+    elif intent == "SOIL_STATUS":
+        s = context.get("sensors", {"soil_moisture": 28, "temperature": 31, "growth_stage": "Flowering & Fruit Setting"})
+        moisture = s.get("soil_moisture", 28)
+        growth_stage = s.get("growth_stage", "Flowering & Fruit Setting")
+        
+        if moisture < 35:
+            status_desc = f"**{moisture}%**, which is **below the optimal target range of 35%–55%** for tomatoes in the {growth_stage} phase. The soil is currently relatively dry."
+        elif moisture > 55:
+            status_desc = f"**{moisture}%**, which is **above optimal range (35%–55%)**, indicating saturated soil."
+        else:
+            status_desc = f"**{moisture}%**, which is **within the healthy target range (35%–55%)**."
+
         reply = (
-            f"🌧️ **Weather Forecast for {w['location']}:**\n\n"
-            f"• **Rain Probability (Next 6 Hours):** {w['rain_probability_6h']}%\n"
-            f"• **Rain Probability (Next 24 Hours):** {w['rain_probability_24h']}%\n"
-            f"• **Temperature:** {w.get('temperature', 31)}°C\n"
-            f"• **Humidity:** {w.get('humidity', 76)}%\n"
-            f"• **Forecast Condition:** {w['forecast_desc']}\n\n"
-            f"💡 **Agricultural Note:** High precipitation chance will provide natural moisture and increase canopy wetness."
+            f"🌱 **Live Soil Moisture Telemetry:**\n\n"
+            f"Your current soil moisture reading is {status_desc}\n\n"
+            f"• **Current Moisture:** {moisture}%\n"
+            f"• **Optimal Target Range:** 35% – 55%\n"
+            f"• **Crop Phase:** {growth_stage}"
         )
 
-    # 4. IRRIGATION DECISION (Sensor + Weather + RAG + Decision Engine)
-    elif intent == "IRRIGATION_DECISION":
+    # 5. IRRIGATION DECISION (Sensor + Weather + RAG + Decision Engine)
+    elif intent == "IRRIGATION":
         s = context.get("sensors", {"soil_moisture": 28, "growth_stage": "Flowering & Fruit Setting"})
         w = context.get("weather", {"rain_probability_6h": 82, "rain_probability_24h": 91})
-        moisture = s["soil_moisture"]
-        rain_6h = w["rain_probability_6h"]
+        moisture = s.get("soil_moisture", 28)
+        rain_p = w.get("rain_probability", w.get("rain_probability_6h", 82))
+        time_target = entities.get("time", "today").lower()
 
-        if rain_6h >= 65:
+        if rain_p >= 65:
             reply = (
                 f"⏳ **Recommendation: Postpone Irrigation**\n\n"
-                f"Although your current soil moisture is relatively low at **{moisture}%**, "
-                f"there is an **{rain_6h}% probability of rain within the next 6 hours** (and {w['rain_probability_24h']}% in 24h).\n\n"
-                f"**Agronomic Reason:** Starting irrigation before heavy rain causes waterlogging, root asphyxiation, and promotes fungal spore dispersal.\n\n"
-                f"💡 **Action Plan:** Hold off watering. Recheck soil moisture after the rain window; if rainfall does not occur and moisture remains below 30%, resume drip irrigation at base."
+                f"Your soil moisture is currently **{moisture}%** (which is low). However, there is an **{rain_p}% chance of rain** {'tomorrow' if 'tomorrow' in time_target else 'within the next 6-12 hours'}.\n\n"
+                f"**Agronomic Rationale:** Irrigating immediately before heavy rainfall causes root waterlogging, oxygen starvation, and encourages fungal spore germination (e.g. Late Blight).\n\n"
+                f"💡 **Action Plan:** Hold off irrigation. Recheck soil moisture after the expected rain window; if rainfall does not occur and moisture remains below 30%, resume drip irrigation at base.\n\n"
+                f"**Decision:** ⏸️ Postpone irrigation."
             )
         elif moisture < 35:
             reply = (
                 f"💧 **Recommendation: Start Irrigation**\n\n"
-                f"Your soil moisture is at **{moisture}%** (below optimal 35%–55%), and rain probability is low ({rain_6h}%).\n\n"
-                f"💡 **Action Plan:** Apply drip irrigation to bring moisture back to ~45%. Ensure water is delivered to root level without wetting foliage."
+                f"Your soil moisture is at **{moisture}%** (below the 35% threshold), and rain probability is low ({rain_p}%).\n\n"
+                f"💡 **Action Plan:** Run drip irrigation for 30–45 minutes to restore soil moisture to ~45%. Ensure water is delivered at root level to prevent wetting the foliage.\n\n"
+                f"**Decision:** ▶️ Proceed with irrigation."
             )
         else:
             reply = (
                 f"✅ **Recommendation: No Irrigation Needed**\n\n"
-                f"Your soil moisture is **{moisture}%**, which is within the optimal 35%–55% range for {s['growth_stage']} tomatoes."
+                f"Your soil moisture is **{moisture}%**, which is within the optimal 35%–55% range for {s.get('growth_stage', 'tomato')} plants.\n\n"
+                f"**Decision:** ⏸️ Soil moisture is optimal."
             )
 
-    # 5. FERTILIZER ADVICE (RAG + Crop Stage)
-    elif intent == "FERTILIZER_ADVICE":
-        doc_snippet = docs[0]["content"] if docs else (
-            "During flowering, tomatoes require higher Potassium (K) and Phosphorus (P) with calcium supplementation."
+    # 6. FERTILIZER ADVICE (Poshan ML Candidate + Tomato Agronomic Validator + Dual-Track Solution)
+    elif intent == "FERTILIZER":
+        s = context.get("sensors", {"soil_moisture": 28, "temperature": 31, "humidity": 76, "growth_stage": "Flowering"})
+        w = context.get("weather", {"rain_probability_6h": 82, "rain_probability": 82})
+        stage = s.get("growth_stage", "Flowering")
+        moisture = s.get("soil_moisture", 28)
+        temp = s.get("temperature", 31)
+        humidity = s.get("humidity", 76)
+        rain_p = w.get("rain_probability", w.get("rain_probability_6h", 82))
+        
+        # Check if user query mentions specific nutrient (e.g. nitrogen, phosphorus, potassium, urea)
+        q_lower = user_query.lower()
+        n_val = 25.0 if "nitrogen" in q_lower or "urea" in q_lower or "pale" in q_lower or "yellow" in q_lower else 35.0
+        p_val = 20.0 if "phosphorus" in q_lower or "dap" in q_lower or "flower" in q_lower else 28.0
+        k_val = 30.0 if "potassium" in q_lower or "mop" in q_lower or "fruit" in q_lower else 41.0
+        
+        rec = recommend_fertilizer(
+            nitrogen=n_val,
+            phosphorus=p_val,
+            potassium=k_val,
+            soil_moisture=moisture,
+            temperature=temp,
+            humidity=humidity,
+            soil_type="Loamy",
+            crop_stage=stage,
+            soil_ph=6.5,
+            rain_probability=rain_p
         )
+        
+        chem = rec["chemical_solution"]
+        org = rec["organic_solution"]
+        
+        precautions_text = ""
+        if rec.get("weather_precautions"):
+            precautions_text = "\n\n⚠️ **Field & Weather Precautions:**\n" + "\n".join([f"• {p['title']}: {p['description']}" for p in rec["weather_precautions"]])
+
         reply = (
-            f"🌼 **Tomato Nutritional & Fertilizer Guidance (Flowering & Fruit Phase)** 🧪\n\n"
-            f"During flowering and fruit set, tomato crops transition from vegetative nitrogen demand to heavy Potassium and Calcium requirements:\n\n"
-            f"• **Recommended NPK Ratio:** High potassium blend such as **NPK 5-10-20** or **9-15-30**\n"
-            f"• **Calcium Supplement:** Apply Calcium Nitrate or Gypsum to prevent *Blossom End Rot*\n"
-            f"• **Application Method:** Apply water-soluble fertilizers via drip fertigation directly at root zone when soil is moist to prevent root scorch.\n\n"
-            f"📖 **Agronomic Reference:**\n{doc_snippet}"
+            f"🌱 **AgriSense Context-Aware Fertilizer Advisory ({stage} Stage)** 🍅\n\n"
+            f"**Candidate ML Model:** `{rec['model_architecture']['ml_candidate_model']}` ({rec['model_architecture']['confidence']}% confidence)\n"
+            f"**Agronomic Diagnosis:** {rec['primary_focus']}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🚀 **FAST CHEMICAL CORRECTION (Quick Acting 3–5 Days):**\n"
+            f"• **Recommended Fertilizer:** **{chem['name']}** ({chem['grade']})\n"
+            f"• **Dosage:** {chem['dosage']}\n"
+            f"• **Application:** {chem['application_method']}\n"
+            f"• **Agronomic Reason:** {chem['why_selected']}\n\n"
+            f"🌿 **NATURAL / LOW-COST ORGANIC ALTERNATIVE (Sustainable 7–14 Days):**\n"
+            f"• **Organic Source:** **{org['name']}**\n"
+            f"• **Dosage:** {org['dosage']}\n"
+            f"• **Benefit:** {org['why_selected']}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            f"{precautions_text}\n\n"
+            f"🔄 **Closed-Loop Verification:** Re-check your NPK and soil moisture sensors in **3–7 days** to verify nutrient restoration."
         )
 
-    # 6. CROP RISK (Multi-Source Synthesis)
+
+    # 7. CROP RISK (Multi-Source Synthesis)
     elif intent == "CROP_RISK":
         s = context.get("sensors", {"soil_moisture": 28, "humidity": 76, "temperature": 31})
         w = context.get("weather", {"rain_probability_6h": 82})
         sc = context.get("scan", {"disease": "Late blight", "confidence": 88.5, "severity": "Moderate", "future_risk": "HIGH"})
 
         reply = (
-            f"⚠️ **Multi-Factor Crop Risk Assessment: {sc['future_risk']} RISK**\n\n"
+            f"⚠️ **Multi-Factor Crop Risk Assessment: {sc.get('future_risk', 'HIGH')} RISK**\n\n"
             f"**Synthesis of Environmental & Visual Indicators:**\n"
-            f"• **Visual Scan:** {sc['disease']} detected ({sc['confidence']}% confidence, {sc['severity']} severity)\n"
-            f"• **Relative Humidity:** {s['humidity']}% (High humidity accelerates fungal spore germination)\n"
-            f"• **Rain Probability:** {w['rain_probability_6h']}% in 6 hours (Rain splash exacerbates spread)\n"
-            f"• **Ambient Temperature:** {s['temperature']}°C\n\n"
+            f"• **Visual Scan:** {sc.get('disease')} detected ({sc.get('confidence')}% confidence, {sc.get('severity')} severity)\n"
+            f"• **Relative Humidity:** {s.get('humidity')}% (High humidity accelerates fungal spore germination)\n"
+            f"• **Rain Probability:** {w.get('rain_probability_6h', 82)}% in 6 hours (Rain splash exacerbates spread)\n"
+            f"• **Ambient Temperature:** {s.get('temperature')}%°C\n\n"
             f"**Recommended Action Plan:**\n"
             f"1. Immediately inspect nearby rows and remove severely infected lower foliage.\n"
             f"2. Avoid overhead sprinkler irrigation to keep leaf canopies dry.\n"
             f"3. Apply targeted protective fungicide (e.g. Copper oxychloride / Mancozeb) before heavy rainfall."
         )
 
-    # 7. DISEASE QUERY (Disease Scan + RAG)
-    elif intent == "DISEASE_QUERY":
+    # 8. CROP STATUS
+    elif intent == "CROP_STATUS":
+        s = context.get("sensors", {"soil_moisture": 28, "temperature": 31, "humidity": 76, "growth_stage": "Flowering & Fruit Setting"})
+        w = context.get("weather", {"rain_probability_6h": 82, "forecast_desc": "Rain expected"})
         sc = context.get("scan", {"disease": "Late blight", "confidence": 88.5, "future_risk": "HIGH"})
-        doc_snippet = docs[0]["content"] if docs else "Inspect leaves and maintain good air circulation."
+
+        reply = (
+            f"📊 **Comprehensive Field & Crop Status Summary:**\n\n"
+            f"• **Crop & Growth Stage:** Tomato ({s.get('growth_stage')})\n"
+            f"• **Soil Moisture:** {s.get('soil_moisture')}% (Target: 35%–55%)\n"
+            f"• **Weather:** {s.get('temperature')}°C, {s.get('humidity')}% humidity, {w.get('rain_probability_6h')}% rain chance\n"
+            f"• **Latest Leaf Scan:** {sc.get('disease')} ({sc.get('future_risk')} Risk)\n\n"
+            f"💡 **Key Priority:** With incoming rainfall and elevated disease risk, prioritize preventive fungicide application and withhold additional irrigation."
+        )
+
+    # 9. DISEASE QUERY
+    elif intent == "DISEASE":
+        sc = context.get("scan", {"disease": "Late blight", "confidence": 88.5, "future_risk": "HIGH"})
+        doc_snippet = docs[0]["content"] if docs else "Inspect leaves and maintain good air circulation between rows."
         reply = (
             f"🛡️ **Pathology Diagnosis & Guidance:**\n\n"
-            f"• **Detected Disease:** {sc['disease']} (Confidence: {sc['confidence']}%)\n"
+            f"• **Detected Disease:** {sc.get('disease')} (Confidence: {sc.get('confidence')}%)\n"
             f"• **Risk Level:** {sc.get('future_risk', 'MODERATE')}\n\n"
             f"**Agronomic Protocol:**\n{doc_snippet}\n\n"
             f"💡 **Key Management Tip:** Sanitize pruning shears between plants, prune bottom leaves to improve airflow, and avoid working in wet foliage."
         )
 
-    # 8. GENERAL AGRICULTURE
+    # 10. GENERAL AGRICULTURE
     else:
-        doc_snippet = docs[0]["content"] if docs else "AgriSense provides precise crop management, disease diagnosis, and irrigation intelligence."
+        doc_snippet = docs[0]["content"] if docs else "AgriSense provides precision tomato crop management, disease diagnosis, and irrigation intelligence."
         reply = (
-            f"🌱 **AgriSense Precision Agronomy:**\n\n"
+            f"🌱 **AgriSense Agronomic Guidance:**\n\n"
             f"{doc_snippet}\n\n"
             f"Feel free to ask about your live soil moisture, irrigation recommendations, disease scans, or fertilizer planning."
         )
@@ -289,7 +374,7 @@ def generate_agricultural_response(user_query: str, route: Dict[str, Any], conte
     return {
         "reply": reply,
         "intent": intent,
-        "sources_used": route.get("sources", []),
+        "sources_used": list(sources),
         "routing_reason": route.get("reason", ""),
         "telemetry_used": telemetry_used,
         "cited_topics": cited_topics

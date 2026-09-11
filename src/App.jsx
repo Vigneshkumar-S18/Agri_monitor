@@ -18,6 +18,8 @@ export default function App() {
   const [selectedSensor, setSelectedSensor] = useState(null)
   const [showAnalysis, setShowAnalysis] = useState(false)
   const [scanResult, setScanResult] = useState(null)
+  const [chatInitialQuery, setChatInitialQuery] = useState(null)
+  const [recommendStage, setRecommendStage] = useState('Flowering')
 
   // Splash -> Login transition
   const handleSplashEnd = () => setCurrentScreen('login')
@@ -30,6 +32,10 @@ export default function App() {
 
   // Navigate to sensor detail
   const handleSensorClick = (sensor) => {
+    if (sensor.id === 'npk') {
+      setActiveTab('recommend')
+      return
+    }
     setSelectedSensor(sensor)
     setCurrentScreen('sensorDetail')
   }
@@ -56,6 +62,16 @@ export default function App() {
     setCurrentScreen('app')
     setShowAnalysis(false)
     setSelectedSensor(null)
+  }
+
+  const handleNavigateToChat = (query) => {
+    setChatInitialQuery(query)
+    handleTabChange('chat')
+  }
+
+  const handleNavigateToRecommend = (stage) => {
+    if (stage) setRecommendStage(stage)
+    handleTabChange('recommend')
   }
 
   // Render splash
@@ -94,26 +110,55 @@ export default function App() {
   const renderScreen = () => {
     switch (activeTab) {
       case 'home':
-        return <HomeScreen onSensorClick={handleSensorClick} />
+        return (
+          <HomeScreen
+            onSensorClick={handleSensorClick}
+            onWeatherClick={() => handleTabChange('weather')}
+            onAlertsClick={() => handleTabChange('alerts')}
+          />
+        )
       case 'scan':
         if (showAnalysis) {
           return <AnalysisResult result={scanResult} onBack={handleBackFromAnalysis} />
         }
         return <ScanScreen onAnalyze={handleShowAnalysis} />
       case 'chat':
-        return <ChatScreen />
+        return (
+          <ChatScreen
+            initialQuery={chatInitialQuery}
+            onClearInitialQuery={() => setChatInitialQuery(null)}
+          />
+        )
       case 'weather':
-        return <WeatherScreen />
+        return <WeatherScreen onBack={() => handleTabChange('home')} />
       case 'alerts':
-        return <AlertsScreen />
+        return (
+          <AlertsScreen
+            onBack={() => handleTabChange('home')}
+            onNavigateToChat={handleNavigateToChat}
+            onNavigateToRecommend={handleNavigateToRecommend}
+          />
+        )
       case 'recommend':
-        return <RecommendScreen />
+        return (
+          <RecommendScreen
+            initialStage={recommendStage}
+            onNavigateToChat={handleNavigateToChat}
+          />
+        )
       case 'irrigation':
         return <IrrigationScreen />
       default:
-        return <HomeScreen onSensorClick={handleSensorClick} />
+        return (
+          <HomeScreen
+            onSensorClick={handleSensorClick}
+            onWeatherClick={() => handleTabChange('weather')}
+            onAlertsClick={() => handleTabChange('alerts')}
+          />
+        )
     }
   }
+
 
   return (
     <div className="mobile-frame">

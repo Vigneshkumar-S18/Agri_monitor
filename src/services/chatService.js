@@ -19,7 +19,9 @@ export async function sendChatMessage(message, contextData = {}) {
         rain_probability_24h: 91,
         location: contextData.locationName || "Coimbatore, Tamil Nadu"
       },
-      latest_scan: contextData.latestScan || null
+      latest_scan: contextData.latestScan || null,
+      crop_history: contextData.cropHistory || null,
+      conversation_history: contextData.conversationHistory || []
     })
   });
 

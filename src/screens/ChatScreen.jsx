@@ -3,18 +3,19 @@ import { Send, Bot, User, Sparkles, Droplets, CloudRain, Thermometer, ShieldAler
 import { sendChatMessage } from '../services/chatService'
 
 const SUGGESTED_QUESTIONS = [
+  "What fertilizer should I use for my tomato crop?",
+  "How do I cure low nitrogen and yellow leaves?",
+  "What is the organic alternative to Urea?",
   "Should I water my tomato field now?",
-  "Why is my crop at high disease risk?",
-  "What fertilizer should I apply during flowering?",
-  "How do I prevent Early Blight from spreading?"
+  "Why is my crop at high disease risk?"
 ]
 
-export default function ChatScreen() {
+export default function ChatScreen({ initialQuery, onClearInitialQuery }) {
   const [messages, setMessages] = useState([
     {
       id: 1,
       sender: 'bot',
-      text: "👋 Hello! I am your **AgriSense Agronomic Assistant**.\n\nI monitor your live field telemetry (soil moisture, temperature), weather forecasts, and disease scans to give you actionable farming guidance.\n\nHow can I help you today?",
+      text: "👋 Hello! I am your **AgriSense Agronomic Assistant**.\n\nI monitor your live field telemetry (soil moisture, temperature, NPK), weather forecasts, and disease scans to give you actionable farming and fertilizer guidance.\n\nHow can I help you today?",
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       telemetry: null
     }
@@ -31,6 +32,15 @@ export default function ChatScreen() {
     scrollToBottom()
   }, [messages, loading])
 
+  // If navigated from an alert or advisor with initial query
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      handleSend(initialQuery)
+      if (onClearInitialQuery) onClearInitialQuery()
+    }
+  }, [initialQuery])
+
+
   const handleSend = async (textToSend) => {
     const query = textToSend || input
     if (!query.trim() || loading) return
@@ -46,8 +56,15 @@ export default function ChatScreen() {
     if (!textToSend) setInput('')
     setLoading(true)
 
+    // Map current message list into conversation history for multi-turn contextual reasoning
+    const conversationHistory = messages.map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.text,
+      intent: m.intent || ''
+    }))
+
     try {
-      const res = await sendChatMessage(query)
+      const res = await sendChatMessage(query, { conversationHistory })
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',

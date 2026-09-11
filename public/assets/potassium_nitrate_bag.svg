@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="kBagBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e2e8f0" />
+      <stop offset="12%" stop-color="#f8fafc" />
+      <stop offset="45%" stop-color="#ffffff" />
+      <stop offset="85%" stop-color="#f1f5f9" />
+      <stop offset="100%" stop-color="#cbd5e1" />
+    </linearGradient>
+    <linearGradient id="kBagTopSeam" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8" />
+      <stop offset="30%" stop-color="#fed7aa" />
+      <stop offset="70%" stop-color="#fdba74" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+    <linearGradient id="kLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+    <filter id="kBagShadow" x="-10%" y="-5%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.15" />
+    </filter>
+  </defs>
+  <g filter="url(#kBagShadow)">
+    <path d="M 36 28 Q 100 24 164 28 L 168 40 Q 100 36 32 40 Z" fill="url(#kBagTopSeam)" stroke="#cbd5e1" stroke-width="0.8" />
+    <path d="M 35 34 Q 100 30 165 34" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="3,2.5" fill="none" opacity="0.85" />
+    <path d="M 32 40 C 24 95, 20 160, 26 210 C 28 218, 42 222, 100 222 C 158 222, 172 218, 174 210 C 180 160, 176 95, 168 40 Q 100 36 32 40 Z" fill="url(#kBagBody)" stroke="#cbd5e1" stroke-width="1" />
+  </g>
+  <rect x="52" y="58" width="96" height="4" rx="2" fill="#ea580c" opacity="0.8" />
+  <text x="100" y="93" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="900" text-anchor="middle" fill="#0f172a" letter-spacing="0.5">NPK 13-0-45</text>
+  <text x="100" y="110" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="700" text-anchor="middle" fill="#ea580c" letter-spacing="0.3">POTASSIUM NITRATE</text>
+  <g transform="translate(86, 122) scale(0.95)">
+    <circle cx="14" cy="18" r="14" fill="url(#kLogoGrad)" />
+    <path d="M 14 4 C 14 4, 11 0, 8 2 C 11 5, 14 6, 14 6 C 14 6, 17 5, 20 2 C 17 0, 14 4, 14 4 Z" fill="#22c55e" />
+    <path d="M 14 6 L 14 1" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" />
+  </g>
+  <g transform="translate(68, 172)">
+    <rect x="0" y="0" width="64" height="16" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="0.7" />
+    <text x="32" y="11.5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="8" font-weight="700" text-anchor="middle" fill="#c2410c">FRUIT EXPANSION</text>
+  </g>
+</svg>
