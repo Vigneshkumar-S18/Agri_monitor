@@ -6,7 +6,7 @@ const tabs = [
   { id: 'scan', label: 'Scan', icon: Scan },
   { id: 'chat', label: 'Advisor', icon: Bot },
   { id: 'recommend', label: 'Recommend', icon: Sprout },
-  { id: 'irrigation', label: 'Irrigation', icon: Droplets },
+  { id: 'alerts', label: 'Alerts', icon: Bell },
 ]
 
 export default function BottomNav({ activeTab, onTabChange }) {

@@ -49,7 +49,7 @@ export default function RecommendScreen({ onBack, onNavigateToChat }) {
       },
       organic: {
         name: 'Wood Ash Extract + Fermented Banana Peel + FYM',
-        image: '/assets/compost_manure.svg',
+        image: '/assets/wood_ash_banana_organic.svg',
         points: [
           'Rich in bio-available organic potassium',
           'Enhances fruit ripening and sweetness naturally',
@@ -137,7 +137,7 @@ export default function RecommendScreen({ onBack, onNavigateToChat }) {
       },
       organic: {
         name: 'Phosphate Rich Organic Manure (PROM) / Bone Meal',
-        image: '/assets/compost_manure.svg',
+        image: '/assets/prom_organic.svg',
         points: [
           'High organic phosphorus bioavailability',
           'Safe for beneficial mycorrhizal soil fungi',
