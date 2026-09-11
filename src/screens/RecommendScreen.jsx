@@ -1,435 +1,253 @@
 import React, { useState } from 'react'
 import {
-  Sparkles, Droplets, Leaf, Beaker, Flower2,
-  Cpu, CheckCircle2, AlertTriangle, RefreshCw, MessageSquare,
-  Sliders, Info, Zap, CloudRain, Thermometer, ChevronDown, ChevronUp,
-  ShieldAlert, Clock
+  ArrowLeft, Share2, ChevronRight, CheckCircle2
 } from 'lucide-react'
-import { getFertilizerRecommendation } from '../services/fertilizerService'
 
-const SOIL_TYPES = ['Loamy', 'Clay', 'Sandy', 'Black Soil', 'Red Soil']
+export default function RecommendScreen({ onBack, onNavigateToChat }) {
+  const [activeTab, setActiveTab] = useState('Overview')
 
-export default function RecommendScreen({ onNavigateToChat }) {
-  // Fixed stage: Fruiting (as requested)
-  const stage = 'Fruiting'
-
-  const [isManualEntry, setIsManualEntry] = useState(false)
-  const [soilType, setSoilType] = useState('Loamy')
-  const [soilPh, setSoilPh] = useState(6.5)
-
-  // Live NPK Telemetry for Fruiting
-  const [nitrogen, setNitrogen] = useState(32)
-  const [phosphorus, setPhosphorus] = useState(24)
-  const [potassium, setPotassium] = useState(36)
-
-  // Environmental context
-  const soilMoisture = 28
-  const temperature = 31
-  const humidity = 76
-  const rainProbability = 82
-
-  const [loading, setLoading] = useState(false)
-  const [recommendation, setRecommendation] = useState(null)
-  const [hasGenerated, setHasGenerated] = useState(false)
-  const [activeSolutionTab, setActiveSolutionTab] = useState('chemical') // 'chemical' | 'organic'
-  const [expandedSection, setExpandedSection] = useState(null) // 'precautions' | 'protocol' | 'verification'
-  const [copiedToast, setCopiedToast] = useState(false)
-
-  // Trigger recommendation only on user request / button click
-  const handleGenerateRecommendation = async () => {
-    setLoading(true)
-    try {
-      const res = await getFertilizerRecommendation({
-        nitrogen: Number(nitrogen),
-        phosphorus: Number(phosphorus),
-        potassium: Number(potassium),
-        soil_moisture: soilMoisture,
-        temperature,
-        humidity,
-        soil_type: soilType,
-        crop_stage: 'Fruiting',
-        soil_ph: Number(soilPh),
-        rain_probability: rainProbability
-      })
-      setRecommendation(res)
-      setHasGenerated(true)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'AgriSense Recommendation - Nitrogen Deficiency',
+        text: 'AgriSense Agronomic Recommendation for Tomato:\n• Nitrogen Deficiency (Moderate)\n• Recommended: Urea (46% N)\n• Organic: Compost / Farmyard Manure (FYM)'
+      }).catch(() => {})
+    } else {
+      navigator.clipboard?.writeText(
+        'AgriSense Recommendation - Nitrogen Deficiency\n• Recommended: Urea (46% N) at 50-60 kg/acre\n• Natural Method: Compost / Farmyard Manure (FYM)'
+      )
+      alert('Prescription copied to clipboard!')
     }
-  }
-
-  const handleResetToSensor = () => {
-    setIsManualEntry(false)
-    setNitrogen(32)
-    setPhosphorus(24)
-    setPotassium(36)
-    setSoilPh(6.5)
-  }
-
-  const toggleAccordion = (key) => {
-    setExpandedSection(prev => (prev === key ? null : key))
-  }
-
-  const handleAskAdvisor = () => {
-    if (onNavigateToChat && recommendation) {
-      const prompt = `My tomato crop is in the Fruiting stage with NPK readings (N:${nitrogen}, P:${phosphorus}, K:${potassium}). How and when should I apply ${activeSolutionTab === 'chemical' ? recommendation.chemical_solution.name : recommendation.organic_solution.name}?`
-      onNavigateToChat(prompt)
-    }
-  }
-
-  const handleCopyPrescription = () => {
-    if (!recommendation) return
-    const text = `AgriSense Tomato Prescription (Fruiting Stage):\n• Fast Chemical: ${recommendation.chemical_solution.name} (${recommendation.chemical_solution.dosage})\n• Organic Alternative: ${recommendation.organic_solution.name} (${recommendation.organic_solution.dosage})\n• Application: Drip Fertigation at root zone.`
-    navigator.clipboard?.writeText(text)
-    setCopiedToast(true)
-    setTimeout(() => setCopiedToast(false), 2500)
   }
 
   return (
-    <div className="recommend-screen-wrapper">
-      {/* Screen Header */}
-      <div className="screen-header" style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
-        <h1 style={{ flex: 1, textAlign: 'center', fontSize: 17, fontWeight: 700, margin: 0 }}>
-          Fertilizer & Nutrient Advisor
-        </h1>
+    <div className="recommend-view-wrapper">
+      {/* 1. TOP HEADER */}
+      <div className="recommend-top-bar">
+        <button className="top-icon-btn" onClick={onBack} aria-label="Go Back">
+          <ArrowLeft size={22} color="#111827" />
+        </button>
+        <h1 className="top-title">Recommendation</h1>
+        <button className="top-icon-btn" onClick={handleShare} aria-label="Share">
+          <Share2 size={20} color="#111827" />
+        </button>
       </div>
 
-      <div className="recommend-screen" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-        {/* ACTIVE STAGE CARD: Tomato Fruiting Stage */}
-        <div className="active-stage-card animate-in">
-          <div className="stage-banner-header">
-            <div className="stage-badge-icon">🍅</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="stage-active-tag">Active Growth Phase</span>
-                <span className="stage-crop-tag">Tomato</span>
-              </div>
-              <h3 style={{ margin: '3px 0 2px', fontSize: 16, fontWeight: 800, color: 'var(--gray-900)' }}>
-                Fruiting & Fruit Expansion Stage
-              </h3>
-            </div>
+      {/* SCROLLABLE MAIN CONTENT */}
+      <div className="recommend-content-body">
+        
+        {/* 2. TOP HERO / DEFICIENCY BANNER */}
+        <div className="deficiency-banner-card">
+          <div className="deficiency-icon-box">
+            {/* Custom Sprout SVG */}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 20h10" />
+              <path d="M10 20c0-5 2-7 2-12" />
+              <path d="M12 8c2-3 6-4 8-4-1 4-3 7-8 7" />
+              <path d="M12 11c-2-3-6-4-8-4 1 4 3 7 8 7" />
+            </svg>
           </div>
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--gray-600)', lineHeight: 1.4 }}>
-            High <strong>Potassium (K)</strong> and <strong>Calcium (Ca)</strong> demand for fruit expansion, sugar content (brix), and Blossom End Rot prevention.
+          <div className="deficiency-meta">
+            <h2 className="deficiency-title">Nitrogen Deficiency</h2>
+            <p className="deficiency-sub">Fertilizer &amp; Natural Solutions</p>
+          </div>
+          <div className="deficiency-status-badge">
+            <span className="bar-icon">
+              <span className="b1"></span>
+              <span className="b2"></span>
+              <span className="b3"></span>
+            </span>
+            <span>Moderate</span>
+          </div>
+        </div>
+
+        {/* 3. HORIZONTAL SEGMENTED PILLS */}
+        <div className="recommend-tabs-row">
+          {['Overview', 'Fertilizer', 'Natural Methods', 'Steps'].map(tab => (
+            <button
+              key={tab}
+              className={`rec-tab-pill ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* 4. SECTION 1: PROBLEM SUMMARY */}
+        <div className="rec-section-item">
+          <div className="rec-section-heading-row">
+            <div className="rec-heading-icon red-circle">
+              {/* Target / Bullseye icon */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="6" />
+                <circle cx="12" cy="12" r="2" />
+              </svg>
+            </div>
+            <h3 className="rec-section-title">1. Problem Summary</h3>
+          </div>
+          <p className="rec-summary-paragraph">
+            Your soil nitrogen level is <strong>low (32 ppm)</strong>, which can cause yellowing leaves, slow growth, and reduced fruit yield in tomato.
           </p>
         </div>
 
-        {/* SOIL & NPK TELEMETRY CARD */}
-        <div className="soil-condition animate-in" style={{ animationDelay: '0.05s' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--gray-800)' }}>
-              Live Field & Nutrient Readings
-            </h4>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                className={`toggle-source-btn ${!isManualEntry ? 'active' : ''}`}
-                onClick={handleResetToSensor}
-              >
-                📡 IoT Sensors
-              </button>
-              <button
-                className={`toggle-source-btn ${isManualEntry ? 'active' : ''}`}
-                onClick={() => setIsManualEntry(true)}
-              >
-                ✍️ Soil Lab Test
-              </button>
+        {/* 5. SECTION 2: RECOMMENDED FERTILIZER */}
+        <div className="rec-section-item">
+          <div className="rec-section-heading-row justify-between">
+            <div className="flex-align-center">
+              <div className="rec-heading-icon green-circle">
+                {/* Lightbulb Icon */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+                  <path d="M9 18h6" />
+                  <path d="M10 22h4" />
+                </svg>
+              </div>
+              <h3 className="rec-section-title">2. Recommended Fertilizer</h3>
             </div>
+            <span className="primary-solution-tag">Primary Solution</span>
           </div>
 
-          {/* N-P-K Display Cards */}
-          <div className="npk-display">
-            <div className="npk-pill n">
-              <div className="npk-label">N</div>
-              {isManualEntry ? (
-                <input
-                  type="number"
-                  value={nitrogen}
-                  onChange={(e) => setNitrogen(Number(e.target.value))}
-                  className="npk-manual-input"
-                  min="0"
-                  max="120"
+          {/* Fertilizer Card */}
+          <div className="rec-card-box">
+            {/* Top row with image and text */}
+            <div className="card-top-row">
+              <div className="card-img-container">
+                <img
+                  src="/assets/urea_fertilizer_bag.svg"
+                  alt="Urea (46% N)"
+                  className="fertilizer-bag-image"
                 />
-              ) : (
-                <div className="npk-val">{nitrogen} <span className="unit">mg/kg</span></div>
-              )}
-              <div className="npk-status sensor-status warning">Low N</div>
+              </div>
+              <div className="card-top-info">
+                <h4 className="product-title">Urea (46% N)</h4>
+                <p className="product-desc">A fast-acting nitrogen fertilizer suitable for tomato crops.</p>
+              </div>
             </div>
 
-            <div className="npk-pill p">
-              <div className="npk-label">P</div>
-              {isManualEntry ? (
-                <input
-                  type="number"
-                  value={phosphorus}
-                  onChange={(e) => setPhosphorus(Number(e.target.value))}
-                  className="npk-manual-input"
-                  min="0"
-                  max="100"
-                />
-              ) : (
-                <div className="npk-val">{phosphorus} <span className="unit">mg/kg</span></div>
-              )}
-              <div className="npk-status sensor-status warning">Low P</div>
+            {/* Inner Box 1: Application Rate */}
+            <div className="inner-green-box">
+              <h5 className="inner-box-green-title">Application Rate</h5>
+              <div className="rate-row main">
+                <span>• 50 – 60 kg per acre</span>
+                <ChevronRight size={16} color="#15803d" />
+              </div>
+              <div className="rate-row sub">
+                <span>• Apply in split doses (2–3 times during the season)</span>
+              </div>
             </div>
 
-            <div className="npk-pill k">
-              <div className="npk-label">K</div>
-              {isManualEntry ? (
-                <input
-                  type="number"
-                  value={potassium}
-                  onChange={(e) => setPotassium(Number(e.target.value))}
-                  className="npk-manual-input"
-                  min="0"
-                  max="120"
-                />
-              ) : (
-                <div className="npk-val">{potassium} <span className="unit">mg/kg</span></div>
-              )}
-              <div className="npk-status sensor-status danger">Suboptimal K</div>
+            {/* Inner Box 2: Why this fertilizer? */}
+            <div className="inner-amber-box">
+              <h5 className="inner-box-amber-title">Why this fertilizer?</h5>
+              <ul className="why-check-list">
+                <li>
+                  <CheckCircle2 size={15} color="#16a34a" className="check-icon" />
+                  <span>High nitrogen content (46% N)</span>
+                </li>
+                <li>
+                  <CheckCircle2 size={15} color="#16a34a" className="check-icon" />
+                  <span>Quickly accessible to plants</span>
+                </li>
+                <li>
+                  <CheckCircle2 size={15} color="#16a34a" className="check-icon" />
+                  <span>Supports healthy leaf and stem growth</span>
+                </li>
+                <li>
+                  <CheckCircle2 size={15} color="#16a34a" className="check-icon" />
+                  <span>Widely available and cost-effective</span>
+                </li>
+              </ul>
             </div>
-          </div>
-
-
-          {/* Telemetry Context Chips */}
-          <div className="env-telemetry-chips">
-            <span className="env-chip">
-              <Droplets size={12} color="#3b82f6" /> Moisture: <strong>{soilMoisture}%</strong>
-            </span>
-            <span className="env-chip">
-              <Thermometer size={12} color="#ea580c" /> Temp: <strong>{temperature}°C</strong>
-            </span>
-            <span className="env-chip">
-              <CloudRain size={12} color="#0284c7" /> Rain (6h): <strong>{rainProbability}%</strong>
-            </span>
           </div>
         </div>
 
-        {/* PROMINENT RECOMMENDATION TRIGGER BUTTON */}
-        <div className="generate-action-box animate-in" style={{ animationDelay: '0.1s' }}>
-          <button
-            className="btn-generate-rec"
-            onClick={handleGenerateRecommendation}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <RefreshCw className="spin" size={18} />
-                <span>Analyzing Fruiting Nutrition...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={18} />
-                <span>{hasGenerated ? 'Re-calculate Recommendation' : 'Recommend Fertilizer & Organic Solution'}</span>
-              </>
-            )}
-          </button>
-          {!hasGenerated && (
-            <p style={{ margin: '8px 0 0', textAlign: 'center', fontSize: 11, color: 'var(--gray-500)' }}>
-              ⚡ Tap to run Poshan ML + AgriSense Agronomic Validation for your fruiting tomato crop.
-            </p>
-          )}
+        {/* 6. SECTION 3: NATURAL / ORGANIC ALTERNATIVES */}
+        <div className="rec-section-item">
+          <div className="rec-section-heading-row justify-between">
+            <div className="flex-align-center">
+              <div className="rec-heading-icon darkgreen-circle">
+                {/* Leaf Icon */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+                </svg>
+              </div>
+              <h3 className="rec-section-title">3. Natural / Organic Alternatives</h3>
+            </div>
+            <span className="eco-friendly-tag">Eco-Friendly Option</span>
+          </div>
+
+          {/* Organic Card */}
+          <div className="rec-card-box">
+            <div className="card-top-row organic">
+              <div className="compost-img-container">
+                <img
+                  src="/assets/compost_manure.svg"
+                  alt="Compost / Farmyard Manure"
+                  className="compost-image"
+                />
+              </div>
+              <div className="card-top-info">
+                <h4 className="product-title organic">Compost / Farmyard Manure (FYM)</h4>
+                <ul className="organic-bullet-list">
+                  <li>• Improves soil organic matter</li>
+                  <li>• Slow and steady nutrient release</li>
+                  <li>• Use 2–5 tons per acre before planting</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="other-options-text">
+              <strong>Other options:</strong> Vermicompost, Green manure (e.g., dhaincha), Neem cake
+            </div>
+          </div>
         </div>
 
-        {/* RESULTS SECTION: REVEALED CLEANLY ONLY AFTER USER CLICKS RECOMMENDATION */}
-        {hasGenerated && recommendation && (
-          <div className="recommendation-results-clean animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-            {/* Model & Diagnosis Tag */}
-            <div className="model-tag-bar">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Cpu size={14} color="#16a34a" />
-                <span>Candidate ML: <strong>Poshan-fertilizer-recommendation</strong> (94.7% Acc)</span>
-              </div>
-              <span className="deficiency-pill">K & P Deficiency Flagged</span>
+        {/* 7. SECTION 4: ADDITIONAL TIPS */}
+        <div className="rec-section-item">
+          <div className="rec-section-heading-row">
+            <div className="rec-heading-icon blue-circle">
+              {/* Book Icon */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-0.5-5Z" />
+                <path d="M6 6h10" />
+                <path d="M6 10h10" />
+              </svg>
             </div>
-
-            {/* Stage Agronomic Focus */}
-            <div className="focus-summary-box">
-              <span className="focus-tag">🎯 Agronomic Fruiting Focus</span>
-              <p>{recommendation.primary_focus}</p>
-            </div>
-
-            {/* TAB SELECTOR: FAST CHEMICAL VS NATURAL ORGANIC (Clean, non-congested toggle) */}
-            <div className="solution-tabs-nav">
-              <button
-                className={`sol-tab-btn ${activeSolutionTab === 'chemical' ? 'active chemical' : ''}`}
-                onClick={() => setActiveSolutionTab('chemical')}
-              >
-                🚀 Fast Chemical Fertilizer
-              </button>
-              <button
-                className={`sol-tab-btn ${activeSolutionTab === 'organic' ? 'active organic' : ''}`}
-                onClick={() => setActiveSolutionTab('organic')}
-              >
-                🌿 Natural / Organic Alternative
-              </button>
-            </div>
-
-            {/* ACTIVE SOLUTION CARD */}
-            {activeSolutionTab === 'chemical' ? (
-              <div className="solution-card chemical animate-in">
-                <div className="solution-badge chemical">
-                  <span>🚀 FAST CHEMICAL CORRECTION</span>
-                  <span className="speed-pill">Response: 3–5 Days</span>
-                </div>
-                <h4 className="sol-name">{recommendation.chemical_solution.name}</h4>
-                <div className="sol-grade">{recommendation.chemical_solution.grade}</div>
-
-                <div className="sol-meta-grid">
-                  <div>
-                    <span className="sol-meta-label">Prescription Dosage:</span>
-                    <p className="sol-meta-val">{recommendation.chemical_solution.dosage}</p>
-                  </div>
-                  <div>
-                    <span className="sol-meta-label">Application Method:</span>
-                    <p className="sol-meta-val">{recommendation.chemical_solution.application_method}</p>
-                  </div>
-                </div>
-
-                <div className="sol-why-box">
-                  <strong>Agronomic Selection Reason:</strong> {recommendation.chemical_solution.why_selected}
-                </div>
-              </div>
-            ) : (
-              <div className="solution-card organic animate-in">
-                <div className="solution-badge organic">
-                  <span>🌿 NATURAL / ORGANIC ALTERNATIVE</span>
-                  <span className="speed-pill">Sustainable Soil Health</span>
-                </div>
-                <h4 className="sol-name">{recommendation.organic_solution.name}</h4>
-
-                <div className="sol-meta-grid">
-                  <div>
-                    <span className="sol-meta-label">Organic Dosage:</span>
-                    <p className="sol-meta-val">{recommendation.organic_solution.dosage}</p>
-                  </div>
-                  <div>
-                    <span className="sol-meta-label">Application Method:</span>
-                    <p className="sol-meta-val">{recommendation.organic_solution.application_method}</p>
-                  </div>
-                </div>
-
-                <div className="sol-why-box organic">
-                  <strong>Soil Health Benefit:</strong> {recommendation.organic_solution.why_selected}
-                </div>
-              </div>
-            )}
-
-            {/* EXPANDABLE ACCORDIONS (Declutters precautions, protocols, and verification) */}
-            <div className="accordion-group">
-
-              {/* Accordion 1: Precautions & Rain Alert */}
-              <div className="accordion-item">
-                <button
-                  className="accordion-header"
-                  onClick={() => toggleAccordion('precautions')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <AlertTriangle size={15} color="#ea580c" />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#9a3412' }}>
-                      Field & Weather Precautions (Rain Warning)
-                    </span>
-                  </div>
-                  {expandedSection === 'precautions' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {expandedSection === 'precautions' && (
-                  <div className="accordion-content precaution animate-in">
-                    <ul className="rec-bullet-list precaution">
-                      {recommendation.weather_precautions.map((p, idx) => (
-                        <li key={idx}><strong>{p.title}:</strong> {p.description}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              {/* Accordion 2: Application Protocol */}
-              <div className="accordion-item">
-                <button
-                  className="accordion-header"
-                  onClick={() => toggleAccordion('protocol')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={15} color="var(--green-600)" />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>
-                      Application Protocol & Schedule
-                    </span>
-                  </div>
-                  {expandedSection === 'protocol' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {expandedSection === 'protocol' && (
-                  <div className="accordion-content animate-in">
-                    <div className="action-checklist">
-                      {recommendation.action_steps.map((step, idx) => (
-                        <div key={idx} className="action-check-item">
-                          <div className="check-number">{idx + 1}</div>
-                          <p>{step.replace(/^\d+\.\s*/, '')}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Accordion 3: Closed-Loop Sensor Verification */}
-              <div className="accordion-item">
-                <button
-                  className="accordion-header"
-                  onClick={() => toggleAccordion('verification')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <RefreshCw size={15} color="var(--green-600)" />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>
-                      Closed-Loop IoT Verification (3–7 Days)
-                    </span>
-                  </div>
-                  {expandedSection === 'verification' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {expandedSection === 'verification' && (
-                  <div className="accordion-content animate-in">
-                    <p style={{ fontSize: 12, color: 'var(--gray-600)', margin: '0 0 8px', lineHeight: 1.4 }}>
-                      After applying fertilizer or organic mulch, re-test your IoT NPK sensor probe in <strong>3–7 days</strong>.
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f0fdf4', padding: '8px 10px', borderRadius: 6, fontSize: 11, color: '#166534', fontWeight: 600 }}>
-                      <span>Target Potassium: &gt; 65 mg/kg</span>
-                      <span>Target Phosphorus: &gt; 45 mg/kg</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* Bottom Actions */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-              <button
-                className="btn-rec-action advisor"
-                onClick={handleAskAdvisor}
-                style={{ flex: 1 }}
-              >
-                <MessageSquare size={16} />
-                Ask Advisor in Chat
-              </button>
-              <button
-                className="btn-rec-action apply"
-                onClick={handleCopyPrescription}
-                style={{ flex: 1 }}
-              >
-                <Zap size={16} />
-                {copiedToast ? 'Prescription Copied!' : 'Copy Prescription'}
-              </button>
-            </div>
-
+            <h3 className="rec-section-title">4. Additional Tips</h3>
           </div>
-        )}
 
-        <div style={{ height: 20 }} />
+          {/* Blue Tips Box */}
+          <div className="additional-tips-box">
+            <ol className="tips-ordered-list">
+              <li>
+                <span className="tip-num">1.</span>
+                <span className="tip-text">Maintain soil moisture after application.</span>
+              </li>
+              <li>
+                <span className="tip-num">2.</span>
+                <span className="tip-text">Avoid over-application (can cause excessive vegetative growth).</span>
+              </li>
+              <li>
+                <span className="tip-num">3.</span>
+                <span className="tip-text">Combine with phosphorus and potassium as per crop stage.</span>
+              </li>
+              <li>
+                <span className="tip-num">4.</span>
+                <span className="tip-text">Recheck soil NPK levels after 3–4 weeks.</span>
+              </li>
+              <li>
+                <span className="tip-num">5.</span>
+                <span className="tip-text">Monitor leaf color and growth for improvement.</span>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <div style={{ height: 24 }}></div>
       </div>
     </div>
   )
 }
-
