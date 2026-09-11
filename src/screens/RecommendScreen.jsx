@@ -371,6 +371,10 @@ export default function RecommendScreen({ onBack, onNavigateToChat }) {
                   src={current.fertilizer.image}
                   alt={current.fertilizer.name}
                   className="fertilizer-bag-image animate-fade"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null
+                    e.currentTarget.src = '/assets/urea_fertilizer_bag.svg'
+                  }}
                 />
               </div>
               <div className="card-top-info">
@@ -432,6 +436,10 @@ export default function RecommendScreen({ onBack, onNavigateToChat }) {
                   src={current.organic.image}
                   alt={current.organic.name}
                   className="compost-image animate-fade"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null
+                    e.currentTarget.src = '/assets/compost_manure.svg'
+                  }}
                 />
               </div>
               <div className="card-top-info">
